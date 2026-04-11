@@ -45,6 +45,8 @@ type Hop struct {
 	TTL int
 	// Anonymous is true if this hop did not respond (* * *).
 	Anonymous bool
+	// MPLS is true if this hop is inside an MPLS tunnel (RFC 4950 ICMP extension).
+	MPLS bool
 }
 
 // PathSpec describes a measurement path through the network.
