@@ -30,6 +30,7 @@ Feed it traceroutes. See the invisible.`,
 	root.AddCommand(newScanCmd())
 	root.AddCommand(newPlanCmd())
 	root.AddCommand(newTUICmd())
+	root.AddCommand(newCompletionCmd())
 
 	return root
 }
@@ -38,6 +39,27 @@ func Execute() {
 	if err := NewRootCmd().Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
+	}
+}
+
+func newCompletionCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:       "completion [bash|zsh|fish]",
+		Short:     "Generate shell completion script",
+		ValidArgs: []string{"bash", "zsh", "fish"},
+		Args:      cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			switch args[0] {
+			case "bash":
+				return cmd.Root().GenBashCompletion(os.Stdout)
+			case "zsh":
+				return cmd.Root().GenZshCompletion(os.Stdout)
+			case "fish":
+				return cmd.Root().GenFishCompletion(os.Stdout, true)
+			default:
+				return fmt.Errorf("unsupported shell: %s", args[0])
+			}
+		},
 	}
 }
 

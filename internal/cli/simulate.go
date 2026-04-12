@@ -101,7 +101,7 @@ the known ground truth.`,
 	}
 
 	cmd.Flags().StringVarP(&topoFile, "topology", "t", "", "Path to Topology Zoo GraphML file (required)")
-	cmd.Flags().StringVarP(&method, "method", "m", "tikhonov", "Solver method: tsvd, tikhonov, nnls, admm, vardi")
+	cmd.Flags().StringVarP(&method, "method", "m", "tikhonov", "Solver method: tsvd, tikhonov, nnls, admm, vardi, tomogravity")
 	cmd.Flags().Float64Var(&noiseScale, "noise", 0.1, "Noise scale (relative, e.g., 0.1 = 10%)")
 	cmd.Flags().StringVar(&noiseModel, "noise-model", "lognormal", "Noise model: lognormal, gaussian")
 	cmd.Flags().IntVar(&congestionLinks, "congestion-links", 2, "Number of congested links")
@@ -124,6 +124,8 @@ func getSolver(name string) tomo.Solver {
 		return &tomo.ADMMSolver{}
 	case "vardi":
 		return &tomo.VardiEMSolver{}
+	case "tomogravity":
+		return &tomo.TomogravitySolver{}
 	default:
 		return &tomo.TikhonovSolver{}
 	}

@@ -21,6 +21,7 @@ func newBenchmarkCmd() *cobra.Command {
 		congestionLinks  int
 		congestionFactor float64
 		seed             int64
+		synthetic        bool
 	)
 
 	cmd := &cobra.Command{
@@ -29,14 +30,6 @@ func newBenchmarkCmd() *cobra.Command {
 		Long: `Loads all GraphML files from a directory, simulates measurements with
 configurable noise, runs every solver, and produces a comparison table.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			files, err := filepath.Glob(filepath.Join(topoDir, "*.graphml"))
-			if err != nil {
-				return fmt.Errorf("glob topologies: %w", err)
-			}
-			if len(files) == 0 {
-				return fmt.Errorf("no .graphml files found in %s", topoDir)
-			}
-
 			cfg := measure.SimConfig{
 				NoiseScale:       noiseScale,
 				NoiseModel:       noiseModel,
@@ -53,24 +46,53 @@ configurable noise, runs every solver, and produces a comparison table.`,
 				&tomo.NNLSSolver{},
 				&tomo.ADMMSolver{},
 				&tomo.VardiEMSolver{},
+				&tomo.TomogravitySolver{},
 			}
 
 			var allResults []bench.BenchResult
 
-			for _, f := range files {
-				g, err := topology.LoadGraphML(f)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "warning: skip %s: %v\n", f, err)
-					continue
+			// Synthetic topologies.
+			if synthetic {
+				syntheticTopos := map[string]*topology.Graph{
+					"ba-30":    topology.BarabasiAlbert(30, 3, seed),
+					"ba-50":    topology.BarabasiAlbert(50, 3, seed),
+					"waxman-30": topology.Waxman(30, 0.5, 0.5, seed),
+					"waxman-50": topology.Waxman(50, 0.5, 0.5, seed),
 				}
+				for name, g := range syntheticTopos {
+					results, err := bench.RunBenchmark(name, g, solvers, cfg)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "warning: %s: %v\n", name, err)
+						continue
+					}
+					allResults = append(allResults, results...)
+				}
+			}
 
-				name := strings.TrimSuffix(filepath.Base(f), ".graphml")
-				results, err := bench.RunBenchmark(name, g, solvers, cfg)
+			// GraphML file topologies.
+			if !synthetic {
+				files, err := filepath.Glob(filepath.Join(topoDir, "*.graphml"))
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "warning: %s: %v\n", name, err)
-					continue
+					return fmt.Errorf("glob topologies: %w", err)
 				}
-				allResults = append(allResults, results...)
+				if len(files) == 0 {
+					return fmt.Errorf("no .graphml files found in %s", topoDir)
+				}
+				for _, f := range files {
+					g, err := topology.LoadGraphML(f)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "warning: skip %s: %v\n", f, err)
+						continue
+					}
+
+					name := strings.TrimSuffix(filepath.Base(f), ".graphml")
+					results, err := bench.RunBenchmark(name, g, solvers, cfg)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "warning: %s: %v\n", name, err)
+						continue
+					}
+					allResults = append(allResults, results...)
+				}
 			}
 
 			fmt.Print(bench.FormatResults(allResults))
@@ -84,6 +106,7 @@ configurable noise, runs every solver, and produces a comparison table.`,
 	cmd.Flags().IntVar(&congestionLinks, "congestion-links", 2, "Number of congested links")
 	cmd.Flags().Float64Var(&congestionFactor, "congestion-factor", 5.0, "Congestion delay multiplier")
 	cmd.Flags().Int64Var(&seed, "seed", 42, "Random seed")
+	cmd.Flags().BoolVar(&synthetic, "synthetic", false, "Use synthetic topologies (Barabasi-Albert, Waxman) instead of GraphML files")
 
 	return cmd
 }
