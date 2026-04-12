@@ -29,6 +29,7 @@ Feed it traceroutes. See the invisible.`,
 	root.AddCommand(newBenchmarkCmd())
 	root.AddCommand(newScanCmd())
 	root.AddCommand(newPlanCmd())
+	root.AddCommand(newTUICmd())
 
 	return root
 }
