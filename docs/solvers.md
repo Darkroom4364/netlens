@@ -1,6 +1,6 @@
 # Solver Reference
 
-netlens ships seven solvers for the network tomography inverse problem `y = Ax + e`, where `A` is the routing matrix, `x` is per-link metrics, and `y` is end-to-end measurements.
+netlens ships seven solvers for the network tomography inverse problem `y = Ax + e`, where `A` is the routing matrix, `x` is per-link metrics, and `y` is end-to-end measurements. See [references.md](references.md) for the full list of academic papers underlying each solver.
 
 ## Core Types
 

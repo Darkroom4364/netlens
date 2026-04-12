@@ -151,6 +151,7 @@ Detailed documentation is available in the `docs/` directory:
 - [Measurement Design](docs/measurement-design.md) -- probe selection and rank optimization
 - [TUI](docs/tui.md) -- interactive mode keybindings and panels
 - [API](docs/api.md) -- using netlens as a Go library
+- [References](docs/references.md) -- academic papers and textbooks underlying netlens
 
 ## License
 
