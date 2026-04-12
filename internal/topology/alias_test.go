@@ -40,7 +40,7 @@ func TestResolveAliases_ViaInferOpts(t *testing.T) {
 		},
 	}
 
-	g, specs, err := InferFromMeasurements(ms, InferOpts{AliasResolution: true})
+	g, specs, _, err := InferFromMeasurements(ms, InferOpts{AliasResolution: true})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

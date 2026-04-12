@@ -30,10 +30,11 @@ const defaultMaxAnonymousFrac = 0.3
 // MPLS hops are flagged but do not produce links (the underlying link is hidden).
 // Paths exceeding the anonymous hop fraction threshold are discarded.
 //
-// Returns the inferred graph, a PathSpec per accepted measurement, and any error.
-func InferFromMeasurements(measurements []tomo.PathMeasurement, opts InferOpts) (*Graph, []tomo.PathSpec, error) {
+// Returns the inferred graph, a PathSpec per accepted measurement,
+// the indices of accepted measurements from the input slice, and any error.
+func InferFromMeasurements(measurements []tomo.PathMeasurement, opts InferOpts) (*Graph, []tomo.PathSpec, []int, error) {
 	if len(measurements) == 0 {
-		return nil, nil, fmt.Errorf("topology: no measurements provided")
+		return nil, nil, nil, fmt.Errorf("topology: no measurements provided")
 	}
 
 	if opts.ECMPDetection {
@@ -64,8 +65,9 @@ func InferFromMeasurements(measurements []tomo.PathMeasurement, opts InferOpts) 
 	}
 
 	var pathSpecs []tomo.PathSpec
+	var acceptedIdx []int
 
-	for _, m := range measurements {
+	for mi, m := range measurements {
 		if len(m.Hops) == 0 {
 			continue
 		}
@@ -116,6 +118,7 @@ func InferFromMeasurements(measurements []tomo.PathMeasurement, opts InferOpts) 
 				Dst:     visibleNodeIDs[len(visibleNodeIDs)-1],
 				LinkIDs: linkIDs,
 			})
+			acceptedIdx = append(acceptedIdx, mi)
 		}
 	}
 
@@ -123,5 +126,5 @@ func InferFromMeasurements(measurements []tomo.PathMeasurement, opts InferOpts) 
 		g = ResolveAliases(g)
 	}
 
-	return g, pathSpecs, nil
+	return g, pathSpecs, acceptedIdx, nil
 }

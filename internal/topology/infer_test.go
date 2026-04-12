@@ -20,11 +20,11 @@ func mplsHop(ip string) tomo.Hop {
 }
 
 func TestInferFromMeasurements_EmptyInput(t *testing.T) {
-	_, _, err := InferFromMeasurements(nil, InferOpts{})
+	_, _, _, err := InferFromMeasurements(nil, InferOpts{})
 	if err == nil {
 		t.Fatal("expected error for nil measurements")
 	}
-	_, _, err = InferFromMeasurements([]tomo.PathMeasurement{}, InferOpts{})
+	_, _, _, err = InferFromMeasurements([]tomo.PathMeasurement{}, InferOpts{})
 	if err == nil {
 		t.Fatal("expected error for empty measurements")
 	}
@@ -43,7 +43,7 @@ func TestInferFromMeasurements_SinglePath(t *testing.T) {
 		},
 	}
 
-	g, specs, err := InferFromMeasurements(ms, InferOpts{})
+	g, specs, _, err := InferFromMeasurements(ms, InferOpts{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestInferFromMeasurements_TwoPaths_SharedLink(t *testing.T) {
 		},
 	}
 
-	g, specs, err := InferFromMeasurements(ms, InferOpts{})
+	g, specs, _, err := InferFromMeasurements(ms, InferOpts{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -124,7 +124,7 @@ func TestInferFromMeasurements_AnonymousHopsSkipped(t *testing.T) {
 	}
 
 	// 1 out of 3 hops is anonymous (33%), so we set threshold to 0.5 to accept it.
-	g, specs, err := InferFromMeasurements(ms, InferOpts{MaxAnonymousFrac: 0.5})
+	g, specs, _, err := InferFromMeasurements(ms, InferOpts{MaxAnonymousFrac: 0.5})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -168,7 +168,7 @@ func TestInferFromMeasurements_DiscardHighAnonymousFraction(t *testing.T) {
 		},
 	}
 
-	g, specs, err := InferFromMeasurements(ms, InferOpts{})
+	g, specs, _, err := InferFromMeasurements(ms, InferOpts{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -196,7 +196,7 @@ func TestInferFromMeasurements_CustomMaxAnonymousFrac(t *testing.T) {
 		},
 	}
 
-	_, specs, err := InferFromMeasurements(ms, InferOpts{MaxAnonymousFrac: 0.5})
+	_, specs, _, err := InferFromMeasurements(ms, InferOpts{MaxAnonymousFrac: 0.5})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -219,7 +219,7 @@ func TestInferFromMeasurements_MPLSHopsSkipped(t *testing.T) {
 		},
 	}
 
-	g, specs, err := InferFromMeasurements(ms, InferOpts{})
+	g, specs, _, err := InferFromMeasurements(ms, InferOpts{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -250,7 +250,7 @@ func TestInferFromMeasurements_DuplicateIPsNoPanic(t *testing.T) {
 		},
 	}
 
-	g, specs, err := InferFromMeasurements(ms, InferOpts{})
+	g, specs, _, err := InferFromMeasurements(ms, InferOpts{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -296,7 +296,7 @@ func TestInferFromMeasurements_DiamondTopology(t *testing.T) {
 		},
 	}
 
-	g, specs, err := InferFromMeasurements(ms, InferOpts{})
+	g, specs, _, err := InferFromMeasurements(ms, InferOpts{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -340,7 +340,7 @@ func TestInferFromMeasurements_AllAnonymousPath(t *testing.T) {
 		},
 	}
 
-	g, specs, err := InferFromMeasurements(ms, InferOpts{})
+	g, specs, _, err := InferFromMeasurements(ms, InferOpts{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -367,7 +367,7 @@ func TestInferFromMeasurements_EmptyHopsSkipped(t *testing.T) {
 		},
 	}
 
-	g, specs, err := InferFromMeasurements(ms, InferOpts{})
+	g, specs, _, err := InferFromMeasurements(ms, InferOpts{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

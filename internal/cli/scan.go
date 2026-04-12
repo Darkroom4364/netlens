@@ -108,19 +108,16 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 			opts := topology.InferOpts{
 				MaxAnonymousFrac: maxAnonymous,
 			}
-			graph, pathSpecs, err := topology.InferFromMeasurements(measurements, opts)
+			graph, pathSpecs, acceptedIdx, err := topology.InferFromMeasurements(measurements, opts)
 			if err != nil {
 				return fmt.Errorf("infer topology: %w", err)
 			}
 
-			// Filter measurements to match pathSpecs (InferFromMeasurements
-			// discards paths with too many anonymous hops, no hops, or fewer
-			// than 2 visible nodes).
-			accepted := filterAcceptedMeasurements(measurements, maxAnonymous)
-
-			if len(accepted) != len(pathSpecs) {
-				return fmt.Errorf("internal error: accepted measurements (%d) != path specs (%d)",
-					len(accepted), len(pathSpecs))
+			// Use the accepted indices returned by InferFromMeasurements
+			// to select the matching measurements.
+			accepted := make([]tomo.PathMeasurement, len(acceptedIdx))
+			for i, idx := range acceptedIdx {
+				accepted[i] = measurements[idx]
 			}
 
 			fmt.Printf("Topology:       %d nodes, %d links\n", graph.NumNodes(), graph.NumLinks())
@@ -179,51 +176,6 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 	_ = cmd.MarkFlagRequired("source")
 
 	return cmd
-}
-
-// filterAcceptedMeasurements replicates the filtering logic of
-// topology.InferFromMeasurements so we get the same subset of measurements
-// that produced PathSpecs.
-func filterAcceptedMeasurements(measurements []tomo.PathMeasurement, maxAnonFrac float64) []tomo.PathMeasurement {
-	if maxAnonFrac == 0 {
-		maxAnonFrac = 0.3
-	}
-
-	var accepted []tomo.PathMeasurement
-	for _, m := range measurements {
-		if len(m.Hops) == 0 {
-			continue
-		}
-
-		anonCount := 0
-		for _, h := range m.Hops {
-			if h.Anonymous {
-				anonCount++
-			}
-		}
-		if float64(anonCount)/float64(len(m.Hops)) > maxAnonFrac {
-			continue
-		}
-
-		// Count visible (non-anonymous, non-MPLS) nodes.
-		visibleCount := 0
-		seen := make(map[string]bool)
-		for _, h := range m.Hops {
-			if h.Anonymous || h.MPLS {
-				continue
-			}
-			if !seen[h.IP] {
-				seen[h.IP] = true
-				visibleCount++
-			}
-		}
-		if visibleCount < 2 {
-			continue
-		}
-
-		accepted = append(accepted, m)
-	}
-	return accepted
 }
 
 // printScanTable prints a human-readable per-link summary table.
