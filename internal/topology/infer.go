@@ -12,6 +12,9 @@ type InferOpts struct {
 	MaxAnonymousFrac float64
 	// ASLevel: if true, use AS-level granularity instead of router-level (placeholder for future).
 	ASLevel bool
+	// AliasResolution: if true, run IP alias resolution (Kapar) to merge
+	// multiple interfaces of the same router into a single node.
+	AliasResolution bool
 }
 
 // defaultMaxAnonymousFrac is used when MaxAnonymousFrac is zero.
@@ -107,6 +110,10 @@ func InferFromMeasurements(measurements []tomo.PathMeasurement, opts InferOpts) 
 				LinkIDs: linkIDs,
 			})
 		}
+	}
+
+	if opts.AliasResolution {
+		g = ResolveAliases(g)
 	}
 
 	return g, pathSpecs, nil
