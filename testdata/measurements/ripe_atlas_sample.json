@@ -1,0 +1,106 @@
+[
+  {
+    "fw": 5080,
+    "from": "192.0.2.1",
+    "msm_id": 12345678,
+    "probe_id": 1001,
+    "timestamp": 1712800000,
+    "lts": 42,
+    "src_addr": "192.168.1.2",
+    "dst_addr": "8.8.8.8",
+    "dst_name": "8.8.8.8",
+    "af": 4,
+    "proto": "ICMP",
+    "size": 48,
+    "paris_id": 1,
+    "type": "traceroute",
+    "result": [
+      {
+        "hop": 1,
+        "result": [
+          {"from": "192.168.1.1", "rtt": 1.234, "size": 48, "ttl": 64},
+          {"from": "192.168.1.1", "rtt": 1.102, "size": 48, "ttl": 64},
+          {"from": "192.168.1.1", "rtt": 1.456, "size": 48, "ttl": 64}
+        ]
+      },
+      {
+        "hop": 2,
+        "result": [
+          {"from": "10.0.0.1", "rtt": 5.678, "size": 48, "ttl": 253},
+          {"from": "10.0.0.1", "rtt": 5.432, "size": 48, "ttl": 253},
+          {"x": "*"}
+        ]
+      },
+      {
+        "hop": 3,
+        "result": [
+          {"x": "*"},
+          {"x": "*"},
+          {"x": "*"}
+        ]
+      },
+      {
+        "hop": 4,
+        "result": [
+          {"from": "72.14.232.76", "rtt": 12.345, "size": 48, "ttl": 56,
+           "icmpext": {
+             "version": 2,
+             "rfc4884": 1,
+             "obj": [{"class": 1, "type": 1, "mpls": [{"label": 24001, "exp": 0, "s": 1, "ttl": 1}]}]
+           }
+          }
+        ]
+      },
+      {
+        "hop": 5,
+        "result": [
+          {"from": "8.8.8.8", "rtt": 15.678, "size": 48, "ttl": 56},
+          {"from": "8.8.8.8", "rtt": 15.234, "size": 48, "ttl": 56},
+          {"from": "8.8.8.8", "rtt": 15.890, "size": 48, "ttl": 56}
+        ]
+      }
+    ]
+  },
+  {
+    "fw": 5080,
+    "from": "198.51.100.1",
+    "msm_id": 12345678,
+    "probe_id": 1002,
+    "timestamp": 1712800005,
+    "lts": 15,
+    "src_addr": "10.1.1.1",
+    "dst_addr": "8.8.8.8",
+    "dst_name": "8.8.8.8",
+    "af": 4,
+    "proto": "ICMP",
+    "size": 48,
+    "paris_id": 1,
+    "type": "traceroute",
+    "result": [
+      {
+        "hop": 1,
+        "result": [
+          {"from": "10.1.1.254", "rtt": 0.456, "size": 48, "ttl": 64}
+        ]
+      },
+      {
+        "hop": 2,
+        "result": [
+          {"from": "203.0.113.1", "rtt": 8.123, "size": 48, "ttl": 252}
+        ]
+      },
+      {
+        "hop": 3,
+        "result": [
+          {"from": "72.14.232.76", "rtt": 11.456, "size": 48, "ttl": 57}
+        ]
+      },
+      {
+        "hop": 4,
+        "result": [
+          {"from": "8.8.8.8", "rtt": 14.789, "size": 48, "ttl": 56}
+        ]
+      }
+    ]
+  }
+]

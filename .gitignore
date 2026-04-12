@@ -28,3 +28,7 @@ Thumbs.db
 
 # Build
 dist/
+
+# Internal docs (not for public repo)
+DEVPLAN.md
+CLAUDE.md
