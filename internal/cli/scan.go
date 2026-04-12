@@ -2,9 +2,11 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/Darkroom4364/netlens/internal/format"
@@ -24,6 +26,7 @@ func newScanCmd() *cobra.Command {
 		start        int64
 		stop         int64
 		maxAnonymous float64
+		useCache     bool
 	)
 
 	cmd := &cobra.Command{
@@ -42,12 +45,37 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 				if msmID == 0 {
 					return fmt.Errorf("--msm is required when --source=ripe")
 				}
-				apiKey := os.Getenv("RIPE_ATLAS_API_KEY")
-				src := measure.NewRIPEAtlasSource(apiKey, "", nil)
-				ctx := context.Background()
-				measurements, err = src.FetchResults(ctx, msmID, start, stop)
-				if err != nil {
-					return fmt.Errorf("fetch RIPE Atlas results: %w", err)
+
+				var cache *measure.Cache
+				var cacheKey string
+				if useCache {
+					cache = measure.NewCache("")
+					cacheKey = cache.Key(strconv.Itoa(msmID), strconv.FormatInt(start, 10), strconv.FormatInt(stop, 10))
+				}
+
+				if cache != nil && cache.Has(cacheKey) {
+					raw, loadErr := cache.Load(cacheKey)
+					if loadErr != nil {
+						return fmt.Errorf("load cache: %w", loadErr)
+					}
+					if err = json.Unmarshal(raw, &measurements); err != nil {
+						return fmt.Errorf("parse cached results: %w", err)
+					}
+					fmt.Println("Loaded results from cache")
+				} else {
+					apiKey := os.Getenv("RIPE_ATLAS_API_KEY")
+					src := measure.NewRIPEAtlasSource(apiKey, "", nil)
+					ctx := context.Background()
+					measurements, err = src.FetchResults(ctx, msmID, start, stop)
+					if err != nil {
+						return fmt.Errorf("fetch RIPE Atlas results: %w", err)
+					}
+					if cache != nil {
+						raw, marshalErr := json.Marshal(measurements)
+						if marshalErr == nil {
+							_ = cache.Store(cacheKey, raw)
+						}
+					}
 				}
 
 			case "traceroute":
@@ -146,6 +174,7 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 	cmd.Flags().Int64Var(&start, "start", oneHourAgo, "UNIX timestamp for RIPE Atlas result window start")
 	cmd.Flags().Int64Var(&stop, "stop", now, "UNIX timestamp for RIPE Atlas result window stop")
 	cmd.Flags().Float64Var(&maxAnonymous, "max-anonymous", 0.3, "Max anonymous hop fraction before discarding path")
+	cmd.Flags().BoolVar(&useCache, "cache", false, "Cache RIPE Atlas results locally (~/.cache/netlens/)")
 
 	_ = cmd.MarkFlagRequired("source")
 
