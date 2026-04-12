@@ -51,6 +51,8 @@ configurable noise, runs every solver, and produces a comparison table.`,
 				&tomo.TSVDSolver{},
 				&tomo.TikhonovSolver{},
 				&tomo.NNLSSolver{},
+				&tomo.ADMMSolver{},
+				&tomo.VardiEMSolver{},
 			}
 
 			var allResults []bench.BenchResult
