@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"time"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
@@ -9,6 +11,9 @@ import (
 	"github.com/Darkroom4364/netlens/internal/tui/styles"
 )
 
+// tickMsg is sent on each refresh interval to trigger a re-solve.
+type tickMsg time.Time
+
 // Model is the top-level Bubble Tea model for the netlens TUI.
 type Model struct {
 	problem      *tomo.Problem
@@ -16,6 +21,8 @@ type Model struct {
 	selectedLink int
 	width        int
 	height       int
+	solver       tomo.Solver
+	refreshRate  time.Duration
 }
 
 // New creates a new TUI model.
@@ -23,7 +30,18 @@ func New(p *tomo.Problem, s *tomo.Solution) Model {
 	return Model{problem: p, solution: s}
 }
 
-func (m Model) Init() tea.Cmd { return nil }
+// NewWithRefresh creates a TUI model that re-solves on a timer.
+// If solver is nil, behaves identically to New.
+func NewWithRefresh(p *tomo.Problem, s *tomo.Solution, solver tomo.Solver, rate time.Duration) Model {
+	return Model{problem: p, solution: s, solver: solver, refreshRate: rate}
+}
+
+func (m Model) Init() tea.Cmd {
+	if m.solver != nil {
+		return tea.Tick(m.refreshRate, func(t time.Time) tea.Msg { return tickMsg(t) })
+	}
+	return nil
+}
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -43,6 +61,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+	case tickMsg:
+		if m.solver != nil {
+			if sol, err := m.solver.Solve(m.problem); err == nil {
+				m.solution = sol
+			}
+			return m, tea.Tick(m.refreshRate, func(t time.Time) tea.Msg { return tickMsg(t) })
+		}
 	}
 	return m, nil
 }
