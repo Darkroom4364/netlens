@@ -39,7 +39,11 @@ func (g *Graph) AddNode(n tomo.Node) {
 }
 
 // AddLink adds a bidirectional link between two nodes.
+// Self-loops (src == dst) are rejected and return -1.
 func (g *Graph) AddLink(src, dst int) int {
+	if src == dst {
+		return -1
+	}
 	key := linkKey(src, dst)
 	if idx, ok := g.linkMap[key]; ok {
 		return idx
