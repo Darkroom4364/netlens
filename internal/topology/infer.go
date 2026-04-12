@@ -15,6 +15,9 @@ type InferOpts struct {
 	// AliasResolution: if true, run IP alias resolution (Kapar) to merge
 	// multiple interfaces of the same router into a single node.
 	AliasResolution bool
+	// ECMPDetection: if true, deduplicate ECMP paths before building the graph,
+	// keeping only the measurement with fewest anonymous hops per (src,dst) pair.
+	ECMPDetection bool
 }
 
 // defaultMaxAnonymousFrac is used when MaxAnonymousFrac is zero.
@@ -31,6 +34,10 @@ const defaultMaxAnonymousFrac = 0.3
 func InferFromMeasurements(measurements []tomo.PathMeasurement, opts InferOpts) (*Graph, []tomo.PathSpec, error) {
 	if len(measurements) == 0 {
 		return nil, nil, fmt.Errorf("topology: no measurements provided")
+	}
+
+	if opts.ECMPDetection {
+		measurements = DeduplicateECMP(measurements)
 	}
 
 	maxAnonFrac := opts.MaxAnonymousFrac
