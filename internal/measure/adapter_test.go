@@ -367,7 +367,7 @@ func TestAdapterICMP_ProbeMultipleNilContext(t *testing.T) {
 		}
 	}()
 	// This should panic inside errgroup.WithContext.
-	_, _ = p.ProbeMultiple(nil, []string{"127.0.0.1"})
+	_, _ = p.ProbeMultiple(nil, []string{"127.0.0.1"}) //nolint:staticcheck // intentionally testing nil context
 }
 
 func TestAdapterICMP_MaxHopsZero(t *testing.T) {

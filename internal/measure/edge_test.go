@@ -28,9 +28,6 @@ var (
 	inputEmptyString  = []byte(`""`)
 	inputTruncated    = []byte(`[{"type":"trace`)
 	inputWrongType    = []byte(`[{"type":"dns","src":"1.1.1.1"}]`)
-	inputNegativeRTT  = []byte(`-5.0`)
-	inputZeroRTT      = []byte(`0.0`)
-	inputLargeRTT     = []byte(`999999999.0`)
 )
 
 // ---------------------------------------------------------------------------

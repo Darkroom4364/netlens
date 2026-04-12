@@ -353,8 +353,6 @@ func TestPaginatedSearch(t *testing.T) {
 
 		var nextURL string
 		if page == 1 {
-			nextURL = fmt.Sprintf(`"%s/measurements/?page=2"`, r.Host)
-			// Use the server URL for the next link.
 			nextURL = fmt.Sprintf(`"http://%s/measurements/?page=2"`, r.Host)
 		}
 
