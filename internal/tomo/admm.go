@@ -77,6 +77,7 @@ func (s *ADMMSolver) Solve(p *Problem) (*Solution, error) {
 	u := mat.NewVecDense(n, nil)
 
 	rhs := mat.NewVecDense(n, nil)
+	zOld := mat.NewVecDense(n, nil)
 	iters := 0
 
 	for k := 0; k < maxIter; k++ {
@@ -92,7 +93,6 @@ func (s *ADMMSolver) Solve(p *Problem) (*Solution, error) {
 
 		// z-update: z = soft_threshold(x + u, λ/ρ)
 		kappa := lambda / rho
-		zOld := mat.NewVecDense(n, nil)
 		zOld.CopyVec(z)
 		for i := 0; i < n; i++ {
 			v := x.AtVec(i) + u.AtVec(i)

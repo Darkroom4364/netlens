@@ -85,6 +85,7 @@ func (s *IRL1Solver) Solve(p *Problem) (*Solution, error) {
 	u := mat.NewVecDense(n, nil)
 	rhsVec := mat.NewVecDense(n, nil)
 
+	zOld := mat.NewVecDense(n, nil)
 	totalIters := 0
 	for outer := 0; outer < outerIter; outer++ {
 		for k := 0; k < innerIter; k++ {
@@ -97,7 +98,6 @@ func (s *IRL1Solver) Solve(p *Problem) (*Solution, error) {
 				return nil, fmt.Errorf("irl1: solve failed: %w", err)
 			}
 			// z-update: weighted soft-threshold
-			zOld := mat.NewVecDense(n, nil)
 			zOld.CopyVec(z)
 			for i := 0; i < n; i++ {
 				v := x.AtVec(i) + u.AtVec(i)
