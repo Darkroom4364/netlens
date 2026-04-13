@@ -57,6 +57,19 @@ the known ground truth.`,
 				return fmt.Errorf("solve: %w", err)
 			}
 
+			// Warn about negative delay estimates (skip for NNLS which guarantees non-negativity)
+			if method != "nnls" {
+				negCount := 0
+				for i := 0; i < sol.X.Len(); i++ {
+					if sol.X.AtVec(i) < 0 {
+						negCount++
+					}
+				}
+				if negCount > 0 {
+					fmt.Fprintf(cmd.ErrOrStderr(), "Warning: %d links have negative delay estimates (physically impossible). Consider using --method nnls to enforce non-negativity.\n", negCount)
+				}
+			}
+
 			// Print results
 			topoName := filepath.Base(topoFile)
 			q := sim.Problem.Quality

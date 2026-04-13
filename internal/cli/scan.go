@@ -142,6 +142,17 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 				return fmt.Errorf("solve: %w", err)
 			}
 
+			// Warn about negative delay estimates
+			negCount := 0
+			for i := 0; i < sol.X.Len(); i++ {
+				if sol.X.AtVec(i) < 0 {
+					negCount++
+				}
+			}
+			if negCount > 0 {
+				fmt.Fprintf(os.Stderr, "Warning: %d links have negative delay estimates (physically impossible). Consider using --method nnls to enforce non-negativity.\n", negCount)
+			}
+
 			fmt.Printf("Solver:         %s\n", sol.Method)
 			fmt.Printf("Duration:       %v\n", sol.Duration)
 			fmt.Printf("Residual:       %.6f\n\n", sol.Residual)
@@ -163,7 +174,7 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 	cmd.Flags().StringVar(&source, "source", "", "Measurement source: \"ripe\" or \"traceroute\" (required)")
 	cmd.Flags().IntVar(&msmID, "msm", 0, "RIPE Atlas measurement ID (required if --source=ripe)")
 	cmd.Flags().StringVar(&file, "file", "", "Path to traceroute JSON file (required if --source=traceroute)")
-	cmd.Flags().StringVarP(&method, "method", "m", "tikhonov", "Solver method: tsvd, tikhonov, nnls")
+	cmd.Flags().StringVarP(&method, "method", "m", "nnls", "Solver method: tsvd, tikhonov, nnls")
 	cmd.Flags().StringVarP(&outputFormat, "format", "f", "table", "Output format: json, csv, dot, table")
 
 	now := time.Now().Unix()
