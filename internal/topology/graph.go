@@ -2,6 +2,7 @@ package topology
 
 import (
 	"math"
+	"sync"
 
 	"github.com/Darkroom4364/netlens/internal/tomo"
 	"gonum.org/v1/gonum/graph"
@@ -12,6 +13,7 @@ import (
 // Graph is a network topology backed by gonum's undirected graph.
 // It implements tomo.Topology.
 type Graph struct {
+	mu    sync.RWMutex
 	g     *simple.UndirectedGraph
 	nodes []tomo.Node
 	links []tomo.Link
@@ -33,6 +35,8 @@ func New() *Graph {
 
 // AddNode adds a node to the graph.
 func (g *Graph) AddNode(n tomo.Node) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	g.nodeMap[n.ID] = len(g.nodes)
 	g.nodes = append(g.nodes, n)
 	g.g.AddNode(simple.Node(n.ID))
@@ -41,6 +45,8 @@ func (g *Graph) AddNode(n tomo.Node) {
 // AddLink adds a bidirectional link between two nodes.
 // Self-loops (src == dst) are rejected and return -1.
 func (g *Graph) AddLink(src, dst int) int {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	if src == dst {
 		return -1
 	}
@@ -68,19 +74,21 @@ func linkKey(a, b int) [2]int {
 }
 
 // NumNodes returns the number of nodes.
-func (g *Graph) NumNodes() int { return len(g.nodes) }
+func (g *Graph) NumNodes() int { g.mu.RLock(); defer g.mu.RUnlock(); return len(g.nodes) }
 
 // NumLinks returns the number of links.
-func (g *Graph) NumLinks() int { return len(g.links) }
+func (g *Graph) NumLinks() int { g.mu.RLock(); defer g.mu.RUnlock(); return len(g.links) }
 
 // Links returns all links.
-func (g *Graph) Links() []tomo.Link { return g.links }
+func (g *Graph) Links() []tomo.Link { g.mu.RLock(); defer g.mu.RUnlock(); return g.links }
 
 // Nodes returns all nodes.
-func (g *Graph) Nodes() []tomo.Node { return g.nodes }
+func (g *Graph) Nodes() []tomo.Node { g.mu.RLock(); defer g.mu.RUnlock(); return g.nodes }
 
 // Neighbors returns node IDs adjacent to the given node.
 func (g *Graph) Neighbors(nodeID int) []int {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 	it := g.g.From(int64(nodeID))
 	var neighbors []int
 	for it.Next() {
@@ -91,6 +99,13 @@ func (g *Graph) Neighbors(nodeID int) []int {
 
 // LinkIndex returns the link index for the edge between src and dst, or -1 if not found.
 func (g *Graph) LinkIndex(src, dst int) int {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.linkIndexLocked(src, dst)
+}
+
+// linkIndexLocked is the lock-free inner implementation of LinkIndex.
+func (g *Graph) linkIndexLocked(src, dst int) int {
 	key := linkKey(src, dst)
 	if idx, ok := g.linkMap[key]; ok {
 		return idx
@@ -100,6 +115,12 @@ func (g *Graph) LinkIndex(src, dst int) int {
 
 // ShortestPath returns the link indices on the shortest path from src to dst.
 func (g *Graph) ShortestPath(src, dst int) ([]int, bool) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.shortestPathLocked(src, dst)
+}
+
+func (g *Graph) shortestPathLocked(src, dst int) ([]int, bool) {
 	sp := path.DijkstraFrom(simple.Node(src), g.g)
 	nodes, _ := sp.To(int64(dst))
 	if len(nodes) < 2 {
@@ -110,7 +131,7 @@ func (g *Graph) ShortestPath(src, dst int) ([]int, bool) {
 	for i := 0; i < len(nodes)-1; i++ {
 		a := int(nodes[i].ID())
 		b := int(nodes[i+1].ID())
-		idx := g.LinkIndex(a, b)
+		idx := g.linkIndexLocked(a, b)
 		if idx < 0 {
 			return nil, false
 		}
@@ -121,6 +142,8 @@ func (g *Graph) ShortestPath(src, dst int) ([]int, bool) {
 
 // AllPairsShortestPaths returns path specs for all reachable (src, dst) pairs.
 func (g *Graph) AllPairsShortestPaths() []tomo.PathSpec {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 	var paths []tomo.PathSpec
 	nodeIDs := make([]int, len(g.nodes))
 	for i, n := range g.nodes {
@@ -129,7 +152,7 @@ func (g *Graph) AllPairsShortestPaths() []tomo.PathSpec {
 
 	for i, src := range nodeIDs {
 		for _, dst := range nodeIDs[i+1:] {
-			if linkIDs, ok := g.ShortestPath(src, dst); ok {
+			if linkIDs, ok := g.shortestPathLocked(src, dst); ok {
 				paths = append(paths, tomo.PathSpec{
 					Src:     src,
 					Dst:     dst,
