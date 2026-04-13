@@ -65,7 +65,7 @@ netlens plan -t testdata/topologies/geant2012.graphml --budget 20
 
 ## Benchmark
 
-All 8 solvers on real ISP topologies from [Topology Zoo](http://www.topology-zoo.org/) with 10% log-normal noise:
+All solvers on real ISP topologies from [Topology Zoo](http://www.topology-zoo.org/) with 10% log-normal noise:
 
 ```
 Topology         Solver      Nodes Links Paths Rank  Cond    RMSE     MAE   Ident

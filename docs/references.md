@@ -99,6 +99,9 @@ Academic papers, textbooks, and resources underlying netlens.
 | Vardi EM solver | [1] |
 | Tomogravity solver | [6] |
 | Bootstrap CI | [18] |
+| IRL1 solver | [46] |
+| Laplacian solver | Graph regularization (link-graph Laplacian as structural prior) |
+| Conformal Prediction | [47] |
 | Identifiability analysis | [5], [7], [8] |
 | Measurement design (`plan`) | [7], [9] |
 | Topology Zoo loader | [23] |

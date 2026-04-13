@@ -143,14 +143,16 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 			}
 
 			// Warn about negative delay estimates
-			negCount := 0
-			for i := 0; i < sol.X.Len(); i++ {
-				if sol.X.AtVec(i) < 0 {
-					negCount++
+			if method != "nnls" {
+				negCount := 0
+				for i := 0; i < sol.X.Len(); i++ {
+					if sol.X.AtVec(i) < 0 {
+						negCount++
+					}
 				}
-			}
-			if negCount > 0 {
-				fmt.Fprintf(os.Stderr, "Warning: %d links have negative delay estimates (physically impossible). Consider using --method nnls to enforce non-negativity.\n", negCount)
+				if negCount > 0 {
+					fmt.Fprintf(os.Stderr, "Warning: %d links have negative delay estimates (physically impossible). Consider using --method nnls to enforce non-negativity.\n", negCount)
+				}
 			}
 
 			fmt.Printf("Solver:         %s\n", sol.Method)

@@ -80,6 +80,13 @@ func Waxman(n int, alpha, beta float64, seed int64) *Graph {
 		}
 	}
 
+	if alpha <= 0 {
+		alpha = 0.01
+	}
+	if L == 0 {
+		L = 1.0
+	}
+
 	for i := 0; i < n; i++ {
 		for j := i + 1; j < n; j++ {
 			p := beta * math.Exp(-dist(i, j)/(alpha*L))
