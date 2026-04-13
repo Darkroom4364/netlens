@@ -32,7 +32,7 @@ func NewRIPEAtlasSource(apiKey, baseURL string, httpClient *http.Client) *RIPEAt
 		baseURL = DefaultRIPEAtlasBaseURL
 	}
 	if httpClient == nil {
-		httpClient = http.DefaultClient
+		httpClient = &http.Client{Timeout: 30 * time.Second}
 	}
 	return &RIPEAtlasSource{
 		APIKey:     apiKey,
