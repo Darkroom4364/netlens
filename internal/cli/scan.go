@@ -174,7 +174,7 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 	cmd.Flags().StringVar(&source, "source", "", "Measurement source: \"ripe\" or \"traceroute\" (required)")
 	cmd.Flags().IntVar(&msmID, "msm", 0, "RIPE Atlas measurement ID (required if --source=ripe)")
 	cmd.Flags().StringVar(&file, "file", "", "Path to traceroute JSON file (required if --source=traceroute)")
-	cmd.Flags().StringVarP(&method, "method", "m", "nnls", "Solver method: tsvd, tikhonov, nnls")
+	cmd.Flags().StringVarP(&method, "method", "m", "nnls", "Solver method: tsvd, tikhonov, nnls, admm, irl1, vardi, tomogravity, laplacian")
 	cmd.Flags().StringVarP(&outputFormat, "format", "f", "table", "Output format: json, csv, dot, table")
 
 	now := time.Now().Unix()

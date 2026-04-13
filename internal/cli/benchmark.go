@@ -47,6 +47,8 @@ configurable noise, runs every solver, and produces a comparison table.`,
 				&tomo.ADMMSolver{},
 				&tomo.VardiEMSolver{},
 				&tomo.TomogravitySolver{},
+				&tomo.IRL1Solver{},
+				&tomo.LaplacianSolver{},
 			}
 
 			var allResults []bench.BenchResult
