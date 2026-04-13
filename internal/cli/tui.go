@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/Darkroom4364/netlens/internal/measure"
 	"github.com/Darkroom4364/netlens/tomo"
-	"github.com/Darkroom4364/netlens/internal/topology"
+	"github.com/Darkroom4364/netlens/topology"
 	"github.com/Darkroom4364/netlens/internal/tui"
 	"github.com/spf13/cobra"
 )

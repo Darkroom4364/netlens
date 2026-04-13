@@ -5,7 +5,7 @@ import (
 
 	"github.com/Darkroom4364/netlens/internal/measure"
 	"github.com/Darkroom4364/netlens/tomo"
-	"github.com/Darkroom4364/netlens/internal/topology"
+	"github.com/Darkroom4364/netlens/topology"
 )
 
 // minimalTopo builds a 2-node, 1-link graph — the smallest possible topology.

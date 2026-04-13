@@ -8,7 +8,7 @@ import (
 
 func testdataDir() string {
 	_, filename, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(filename), "..", "..", "testdata", "topologies")
+	return filepath.Join(filepath.Dir(filename), "..", "testdata", "topologies")
 }
 
 func TestLoadAbilene(t *testing.T) {
