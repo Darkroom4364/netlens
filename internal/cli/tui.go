@@ -1,3 +1,5 @@
+//go:build tui
+
 package cli
 
 import (

@@ -1,3 +1,5 @@
+//go:build tui
+
 package styles
 
 import "github.com/charmbracelet/lipgloss"
