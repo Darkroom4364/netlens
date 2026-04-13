@@ -45,12 +45,12 @@ func TestResolveAliases_ViaInferOpts(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Stub is pass-through, so counts should be unchanged.
-	if g.NumNodes() != 3 {
-		t.Errorf("expected 3 nodes, got %d", g.NumNodes())
+	// 10.0.0.1 and 10.0.0.3 are same /30, different /31, not connected → merged.
+	if g.NumNodes() != 2 {
+		t.Errorf("expected 2 nodes, got %d", g.NumNodes())
 	}
-	if g.NumLinks() != 2 {
-		t.Errorf("expected 2 links, got %d", g.NumLinks())
+	if g.NumLinks() != 1 {
+		t.Errorf("expected 1 link, got %d", g.NumLinks())
 	}
 	if len(specs) != 1 {
 		t.Errorf("expected 1 path spec, got %d", len(specs))
