@@ -14,7 +14,7 @@ func AnalyzeQuality(A *mat.Dense) *MatrixQuality {
 
 	// Compute SVD of A
 	var svd mat.SVD
-	ok := svd.Factorize(A, mat.SVDThin)
+	ok := svd.Factorize(A, mat.SVDFull)
 	if !ok {
 		// SVD failed — return worst-case quality
 		return &MatrixQuality{
@@ -57,13 +57,13 @@ func AnalyzeQuality(A *mat.Dense) *MatrixQuality {
 	}
 
 	// Identify unidentifiable links via the right singular vectors (V).
-	// A link is unidentifiable if it has zero projection onto the column space of A,
-	// i.e., the corresponding row of V (for the nonzero singular value columns) is all zeros.
+	// A link is unidentifiable if it has nonzero projection onto the null space of A,
+	// i.e., the corresponding row of V for columns rank+1..n is nonzero.
 	var v mat.Dense
 	svd.VTo(&v)
 	vRows, _ := v.Dims()
 
-	unidentifiable := identifyNullSpaceLinks(v, rank, vRows)
+	unidentifiable := identifyNullSpaceLinks(v, rank, vRows, sv)
 	identifiableFrac := 1.0
 	if n > 0 {
 		identifiableFrac = float64(n-len(unidentifiable)) / float64(n)
@@ -81,9 +81,9 @@ func AnalyzeQuality(A *mat.Dense) *MatrixQuality {
 	}
 }
 
-// identifyNullSpaceLinks finds links whose rows in V are zero
-// across all columns corresponding to nonzero singular values.
-func identifyNullSpaceLinks(V mat.Dense, rank, nLinks int) []int {
+// identifyNullSpaceLinks finds links that have nonzero projection onto the
+// null space of A, i.e., columns rank..n-1 of V from the full SVD.
+func identifyNullSpaceLinks(V mat.Dense, rank, nLinks int, sv []float64) []int {
 	if rank == 0 {
 		return makeRange(0, nLinks)
 	}
@@ -91,14 +91,16 @@ func identifyNullSpaceLinks(V mat.Dense, rank, nLinks int) []int {
 		return nil // all links identifiable
 	}
 
+	_, vCols := V.Dims()
+	threshold := svdTolerance * sv[0]
 	var unidentifiable []int
 	for i := 0; i < nLinks; i++ {
 		norm := 0.0
-		for j := 0; j < rank; j++ {
+		for j := rank; j < vCols; j++ {
 			v := V.At(i, j)
 			norm += v * v
 		}
-		if math.Sqrt(norm) < svdTolerance {
+		if math.Sqrt(norm) > threshold {
 			unidentifiable = append(unidentifiable, i)
 		}
 	}
