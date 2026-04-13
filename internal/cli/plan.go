@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/Darkroom4364/netlens/internal/plan"
-	"github.com/Darkroom4364/netlens/internal/topology"
+	"github.com/Darkroom4364/netlens/topology"
 	"github.com/spf13/cobra"
 )
 

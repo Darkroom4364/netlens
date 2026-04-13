@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/Darkroom4364/netlens/tomo"
-	"github.com/Darkroom4364/netlens/internal/topology"
+	"github.com/Darkroom4364/netlens/topology"
 )
 
 func TestBootstrapTriangleNoiseFree(t *testing.T) {
