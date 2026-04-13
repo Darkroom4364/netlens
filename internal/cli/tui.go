@@ -47,7 +47,7 @@ func newTUICmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&topoFile, "topology", "t", "", "Path to Topology Zoo GraphML file (required)")
-	cmd.Flags().StringVarP(&method, "method", "m", "tikhonov", "Solver method: tsvd, tikhonov, nnls, admm, vardi")
+	cmd.Flags().StringVarP(&method, "method", "m", "tikhonov", "Solver method: tsvd, tikhonov, nnls, admm, irl1, vardi, tomogravity, laplacian")
 	_ = cmd.MarkFlagRequired("topology")
 
 	return cmd

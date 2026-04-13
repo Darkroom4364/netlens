@@ -47,7 +47,7 @@ func main() {
 }
 ```
 
-## Core Types (`internal/tomo`)
+## Core Types (`tomo`)
 
 ### Topology (interface)
 
@@ -189,7 +189,7 @@ type Solution struct {
 | `VardiEMSolver` | `&tomo.VardiEMSolver{MaxIter: 500}` | Classic EM, non-negative, no matrix inversion |
 | `TomogravitySolver` | `&tomo.TomogravitySolver{}` | Gravity-model prior + Tikhonov correction |
 
-## Topology (`internal/topology`)
+## Topology (`topology`)
 
 ### Loading GraphML (Topology Zoo)
 

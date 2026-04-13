@@ -1,6 +1,6 @@
 # Solver Reference
 
-netlens ships seven solvers for the network tomography inverse problem `y = Ax + e`, where `A` is the routing matrix, `x` is per-link metrics, and `y` is end-to-end measurements. See [references.md](references.md) for the full list of academic papers underlying each solver.
+netlens ships nine solvers for the network tomography inverse problem `y = Ax + e`, where `A` is the routing matrix, `x` is per-link metrics, and `y` is end-to-end measurements, plus Bootstrap CI and Conformal Prediction for uncertainty quantification. See [references.md](references.md) for the full list of academic papers underlying each solver.
 
 ## Core Types
 
@@ -8,7 +8,7 @@ netlens ships seven solvers for the network tomography inverse problem `y = Ax +
 
 **Solution** (`tomo.Solution`) — holds per-link estimates `X`, optional `Confidence` intervals, `Identifiable` mask, `Residual` norm, solver `Method` name, `Duration`, and solver-specific `Metadata`.
 
-**Solver interface** — `Name() string` and `Solve(p *Problem) (*Solution, error)`. All seven solvers implement this.
+**Solver interface** — `Name() string` and `Solve(p *Problem) (*Solution, error)`. All nine solvers implement this.
 
 ---
 
@@ -103,7 +103,38 @@ Gravity-model prior plus Tikhonov residual correction.
 - **When to use:** When you have a reasonable expectation that link metrics are proportional to traffic load. The gravity prior gives a sensible starting point, reducing dependence on regularization.
 - **RMSE:** Often best overall — the prior reduces effective noise. Strong on real-world topologies.
 
-### 7. Bootstrap (meta-solver)
+### 7. IRL1 (`irl1`)
+
+Iterative Reweighted L1 minimization. Sharpens sparse recovery by adaptively penalizing near-zero components more heavily than large ones.
+
+**Formulation:** Outer loop reweights `w_j = 1 / (|x_j| + epsilon)`, inner loop solves `min sum(w_j |x_j|) + (1/2) ||Ax - b||^2` via ADMM.
+
+| Parameter | Default | Notes |
+|-----------|---------|-------|
+| `MaxOuterIter` | 5 | Reweighting iterations |
+| `MaxInnerIter` | 100 | ADMM iterations per reweight |
+| `Rho` | 1.0 | ADMM augmented Lagrangian penalty |
+| `Epsilon` | 0.1 | Reweighting stability parameter |
+
+- **Non-negativity:** No (but stronger sparsity than plain L1 often yields non-negative solutions).
+- **When to use:** When ADMM's uniform L1 penalty over-shrinks large congested links. IRL1 better approximates L0 sparsity, recovering both the support and magnitude of sparse congestion patterns.
+- **RMSE:** Strictly better than ADMM when ground truth is sparse; diminishing returns on dense scenarios.
+
+### 8. Laplacian (`laplacian`)
+
+Graph-Laplacian-regularized least squares. Uses the network topology as a structural prior so that adjacent links have similar estimates.
+
+**Formulation:** `min ||Ax - b||^2 + lambda * ||Lx||^2` where `L` is the link-graph Laplacian.
+
+| Parameter | Default | Notes |
+|-----------|---------|-------|
+| `Lambda` | 0 (auto) | Regularization weight; auto-selected over 40 log-spaced candidates |
+
+- **Non-negativity:** No.
+- **When to use:** When you expect spatially smooth link metrics — e.g., regional congestion affecting neighboring links. Requires topology (`Problem.Topo` must be set).
+- **RMSE:** Outperforms Tikhonov when spatial smoothness holds; can over-smooth isolated hotspots.
+
+### 9. Bootstrap (meta-solver)
 
 Not a solver itself — wraps any solver to produce confidence intervals via resampling.
 
@@ -125,6 +156,29 @@ sol, err := tomo.Bootstrap(problem, &tomo.TikhonovSolver{}, tomo.BootstrapConfig
 ```
 
 The `Confidence` field on Solution is a `*mat.VecDense` where each element is `(hi - lo) / 2` from the percentile interval. Failed bootstrap samples are silently skipped.
+
+### 10. Conformal Prediction (meta-solver)
+
+Distribution-free prediction intervals via split conformal prediction. Faster than Bootstrap (single solve) with finite-sample marginal coverage guarantee.
+
+**Formulation:** Split paths into training and calibration sets. Solve on training set, compute residuals on calibration set, use quantile of absolute residuals as interval half-width.
+
+| Parameter | Default | Notes |
+|-----------|---------|-------|
+| `CalibrationFrac` | 0.2 | Fraction of paths held out for calibration |
+| `Alpha` | 0.05 | Significance level (0.05 = 95% CI) |
+| `Seed` | 0 (random) | For reproducibility |
+
+**Usage:**
+```go
+sol, err := tomo.Conformal(problem, &tomo.TikhonovSolver{}, tomo.ConformalConfig{
+    CalibrationFrac: 0.2,
+    Alpha:           0.05,
+})
+// sol.Confidence[j] = conformal interval half-width for link j
+```
+
+- **When to use:** When you need fast UQ without resampling overhead. Single solve + calibration step. Coverage guarantee holds regardless of the true distribution.
 
 ---
 
