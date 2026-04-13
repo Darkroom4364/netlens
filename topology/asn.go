@@ -62,7 +62,7 @@ func (r *ASNResolver) Resolve(ctx context.Context, ip string) (uint32, error) {
 		r.cacheStore(ip, 0)
 		return 0, fmt.Errorf("asn: query RIPE for %s: %w", ip, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		r.cacheStore(ip, 0)

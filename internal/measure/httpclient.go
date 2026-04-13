@@ -33,7 +33,7 @@ func (c *RetryableClient) Get(ctx context.Context, url string, authHeader string
 			return nil, fmt.Errorf("http get %s: %w", url, err)
 		}
 		body, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if err != nil {
 			return nil, fmt.Errorf("read response body: %w", err)
 		}

@@ -49,7 +49,7 @@ func newTestResolver(srv *httptest.Server) *ASNResolver {
 func TestASNResolve_Valid(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"data":{"asns":["15169"]}}`)
+		_, _ = fmt.Fprint(w, `{"data":{"asns":["15169"]}}`)
 	}))
 	defer srv.Close()
 
@@ -68,7 +68,7 @@ func TestASNResolve_CacheHit(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		atomic.AddInt64(&reqCount, 1)
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"data":{"asns":["15169"]}}`)
+		_, _ = fmt.Fprint(w, `{"data":{"asns":["15169"]}}`)
 	}))
 	defer srv.Close()
 
@@ -95,7 +95,7 @@ func TestASNResolve_CacheHit(t *testing.T) {
 func TestASNResolve_InvalidIP(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"data":{"asns":[]}}`)
+		_, _ = fmt.Fprint(w, `{"data":{"asns":[]}}`)
 	}))
 	defer srv.Close()
 
@@ -112,7 +112,7 @@ func TestASNResolve_InvalidIP(t *testing.T) {
 func TestASNResolve_HTTP500(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, `internal server error`)
+		_, _ = fmt.Fprint(w, `internal server error`)
 	}))
 	defer srv.Close()
 
@@ -126,7 +126,7 @@ func TestASNResolve_HTTP500(t *testing.T) {
 func TestASNResolve_MalformedJSON(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{not json at all!!!`)
+		_, _ = fmt.Fprint(w, `{not json at all!!!`)
 	}))
 	defer srv.Close()
 
@@ -140,7 +140,7 @@ func TestASNResolve_MalformedJSON(t *testing.T) {
 func TestASNResolve_EmptyASNs(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"data":{"asns":[]}}`)
+		_, _ = fmt.Fprint(w, `{"data":{"asns":[]}}`)
 	}))
 	defer srv.Close()
 
@@ -157,7 +157,7 @@ func TestASNResolve_EmptyASNs(t *testing.T) {
 func TestASNResolve_MultipleASNs(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"data":{"asns":["15169","13335"]}}`)
+		_, _ = fmt.Fprint(w, `{"data":{"asns":["15169","13335"]}}`)
 	}))
 	defer srv.Close()
 
@@ -196,7 +196,7 @@ func TestASNResolveAll_DuplicateIPs(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		atomic.AddInt64(&reqCount, 1)
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"data":{"asns":["15169"]}}`)
+		_, _ = fmt.Fprint(w, `{"data":{"asns":["15169"]}}`)
 	}))
 	defer srv.Close()
 
