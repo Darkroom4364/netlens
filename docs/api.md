@@ -1,6 +1,11 @@
 # netlens Go Library API Reference
 
-Import path: `github.com/Darkroom4364/netlens/internal/...`
+```go
+import (
+    "github.com/Darkroom4364/netlens/tomo"
+    "github.com/Darkroom4364/netlens/topology"
+)
+```
 
 ## Quick Example
 
@@ -12,8 +17,8 @@ import (
     "os"
 
     "github.com/Darkroom4364/netlens/internal/format"
-    "github.com/Darkroom4364/netlens/internal/tomo"
-    "github.com/Darkroom4364/netlens/internal/topology"
+    "github.com/Darkroom4364/netlens/tomo"
+    "github.com/Darkroom4364/netlens/topology"
 )
 
 func main() {
