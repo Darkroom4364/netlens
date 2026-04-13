@@ -128,6 +128,9 @@ func TestCLI_BenchmarkTopologies(t *testing.T) {
 }
 
 func TestCLI_BenchmarkSynthetic(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping synthetic benchmark under -short (Laplacian SVD too slow with race detector)")
+	}
 	out, err := executeCommand("benchmark", "--synthetic")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
