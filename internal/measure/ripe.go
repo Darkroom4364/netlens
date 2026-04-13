@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 )
 
 // Default RIPE Atlas API base URL.

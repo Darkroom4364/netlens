@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 	"gonum.org/v1/gonum/mat"
 )
 

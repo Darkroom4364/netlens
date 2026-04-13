@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 )
 
 // DOTFormatter writes a Solution as a GraphViz DOT graph with color-coded links.

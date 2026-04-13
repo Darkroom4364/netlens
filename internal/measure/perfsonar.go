@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 )
 
 // PerfSONARSource is an HTTP client for the esmond REST API (PerfSONAR).

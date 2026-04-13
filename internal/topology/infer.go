@@ -3,7 +3,7 @@ package topology
 import (
 	"fmt"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 )
 
 // InferOpts controls the topology inference behavior.

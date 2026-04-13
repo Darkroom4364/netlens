@@ -5,13 +5,13 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 	"github.com/Darkroom4364/netlens/internal/topology"
 )
 
 func testdataDir() string {
 	_, filename, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(filename), "..", "..", "testdata", "topologies")
+	return filepath.Join(filepath.Dir(filename), "..", "testdata", "topologies")
 }
 
 func TestBuildProblemFromTopology(t *testing.T) {

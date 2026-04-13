@@ -10,7 +10,7 @@ import (
 	probing "github.com/prometheus-community/pro-bing"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 )
 
 // ICMPProber performs traceroute-style probes using ICMP echo with

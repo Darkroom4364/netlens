@@ -5,7 +5,7 @@ import (
 	"math"
 	"math/rand"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 )
 
 // BarabasiAlbert generates a scale-free graph using preferential attachment.

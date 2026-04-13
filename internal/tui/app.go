@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 	"github.com/Darkroom4364/netlens/internal/tui/panels"
 	"github.com/Darkroom4364/netlens/internal/tui/styles"
 )
