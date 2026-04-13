@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
 
 jobs:
   test:
@@ -25,7 +25,10 @@ jobs:
         run: go build -v ./...
 
       - name: Test
-        run: go test -race -v ./...
+        run: go test -v -timeout=300s ./...
+
+      - name: Test (race detector, short mode)
+        run: go test -race -short -timeout=300s ./...
 
   lint:
     runs-on: ubuntu-latest
