@@ -22,6 +22,9 @@ type ADMMSolver struct {
 func (s *ADMMSolver) Name() string { return "admm" }
 
 func (s *ADMMSolver) Solve(p *Problem) (*Solution, error) {
+	if p == nil || p.A == nil || p.B == nil {
+		return nil, fmt.Errorf("%s: nil problem, routing matrix, or measurement vector", s.Name())
+	}
 	start := time.Now()
 	m, n := p.A.Dims()
 	if m == 0 || n == 0 {

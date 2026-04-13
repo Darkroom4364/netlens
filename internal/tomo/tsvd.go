@@ -18,6 +18,9 @@ type TSVDSolver struct {
 func (s *TSVDSolver) Name() string { return "tsvd" }
 
 func (s *TSVDSolver) Solve(p *Problem) (*Solution, error) {
+	if p == nil || p.A == nil || p.B == nil {
+		return nil, fmt.Errorf("%s: nil problem, routing matrix, or measurement vector", s.Name())
+	}
 	start := time.Now()
 	m, n := p.A.Dims()
 

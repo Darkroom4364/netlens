@@ -21,6 +21,9 @@ type TikhonovSolver struct {
 func (s *TikhonovSolver) Name() string { return "tikhonov" }
 
 func (s *TikhonovSolver) Solve(p *Problem) (*Solution, error) {
+	if p == nil || p.A == nil || p.B == nil {
+		return nil, fmt.Errorf("%s: nil problem, routing matrix, or measurement vector", s.Name())
+	}
 	start := time.Now()
 	_, n := p.A.Dims()
 

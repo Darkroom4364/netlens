@@ -22,6 +22,9 @@ type IRL1Solver struct {
 func (s *IRL1Solver) Name() string { return "irl1" }
 
 func (s *IRL1Solver) Solve(p *Problem) (*Solution, error) {
+	if p == nil || p.A == nil || p.B == nil {
+		return nil, fmt.Errorf("%s: nil problem, routing matrix, or measurement vector", s.Name())
+	}
 	start := time.Now()
 	m, n := p.A.Dims()
 	if m == 0 || n == 0 {

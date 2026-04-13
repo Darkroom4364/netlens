@@ -20,6 +20,9 @@ type NNLSSolver struct {
 func (s *NNLSSolver) Name() string { return "nnls" }
 
 func (s *NNLSSolver) Solve(p *Problem) (*Solution, error) {
+	if p == nil || p.A == nil || p.B == nil {
+		return nil, fmt.Errorf("%s: nil problem, routing matrix, or measurement vector", s.Name())
+	}
 	start := time.Now()
 	m, n := p.A.Dims()
 
