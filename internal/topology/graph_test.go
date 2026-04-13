@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 )
 
 // ---------- 1. AddNode with duplicate ID ----------

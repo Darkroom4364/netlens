@@ -3,7 +3,7 @@ package format
 import (
 	"io"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 )
 
 // Formatter writes a Solution in a specific output format.

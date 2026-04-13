@@ -3,7 +3,7 @@ package topology
 import (
 	"testing"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 )
 
 func buildGraph(ips []string, links [][2]int) *Graph {

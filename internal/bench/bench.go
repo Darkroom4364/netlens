@@ -6,7 +6,7 @@ import (
 	"sort"
 
 	"github.com/Darkroom4364/netlens/internal/measure"
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 	"github.com/Darkroom4364/netlens/internal/topology"
 	"gonum.org/v1/gonum/mat"
 )

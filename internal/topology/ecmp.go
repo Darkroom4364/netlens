@@ -3,7 +3,7 @@ package topology
 import (
 	"strings"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 )
 
 // ECMPResult holds ECMP detection results for a (src,dst) pair.

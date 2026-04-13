@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 )
 
 // Mock RIPE Atlas traceroute results (same shape as the real API).

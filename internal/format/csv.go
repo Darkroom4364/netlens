@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 )
 
 // CSVFormatter writes a Solution as CSV suitable for spreadsheets.

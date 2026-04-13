@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 )
 
 // ---------- InferFromMeasurements edge cases ----------

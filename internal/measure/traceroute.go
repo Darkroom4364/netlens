@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 )
 
 // ParseScamperJSON parses scamper's warts2json output (JSON array of traceroute results).

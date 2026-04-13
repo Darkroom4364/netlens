@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 )
 
 func TestResolveAliases_PassThrough(t *testing.T) {

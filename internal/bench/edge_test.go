@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/Darkroom4364/netlens/internal/measure"
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 	"github.com/Darkroom4364/netlens/internal/topology"
 )
 

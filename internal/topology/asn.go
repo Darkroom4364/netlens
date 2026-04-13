@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 )
 
 // ASNResolver maps IP addresses to AS numbers using the RIPE RIStat API.

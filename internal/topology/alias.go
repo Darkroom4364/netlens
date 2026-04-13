@@ -3,7 +3,7 @@ package topology
 import (
 	"net"
 
-	"github.com/Darkroom4364/netlens/internal/tomo"
+	"github.com/Darkroom4364/netlens/tomo"
 )
 
 // ResolveAliases merges nodes that likely represent different interfaces
