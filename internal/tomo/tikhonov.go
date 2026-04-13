@@ -12,8 +12,10 @@ import (
 // min ||Ax - b||² + λ||x||²
 // Solution: x = (AᵀA + λI)⁻¹ Aᵀb
 type TikhonovSolver struct {
-	// Lambda is the regularization parameter. If 0, uses GCV to select automatically.
+	// Lambda is the regularization parameter. If 0, uses automatic selection.
 	Lambda float64
+	// LambdaMethod selects the automatic method: "gcv" (default) or "lcurve".
+	LambdaMethod string
 }
 
 func (s *TikhonovSolver) Name() string { return "tikhonov" }
@@ -39,7 +41,11 @@ func (s *TikhonovSolver) Solve(p *Problem) (*Solution, error) {
 	// Select lambda
 	lambda := s.Lambda
 	if lambda <= 0 {
-		lambda = selectLambdaGCV(sv, &u, p.B, m, n)
+		if s.LambdaMethod == "lcurve" {
+			lambda = selectLambdaLCurve(sv, &u, p.B, m, n)
+		} else {
+			lambda = selectLambdaGCV(sv, &u, p.B, m, n)
+		}
 	}
 
 	// Tikhonov solution via SVD:
@@ -141,4 +147,69 @@ func selectLambdaGCV(sv []float64, u *mat.Dense, b *mat.VecDense, m, n int) floa
 	}
 
 	return bestLambda
+}
+
+// selectLambdaLCurve selects λ by finding the point of maximum curvature
+// on the L-curve (log-log plot of residual norm vs solution norm).
+func selectLambdaLCurve(sv []float64, u *mat.Dense, b *mat.VecDense, m, n int) float64 {
+	k := len(sv)
+	uTb := make([]float64, k)
+	for j := 0; j < k; j++ {
+		for i := 0; i < m; i++ {
+			uTb[j] += u.At(i, j) * b.AtVec(i)
+		}
+	}
+
+	minLambda := sv[k-1] * sv[k-1] * 1e-6
+	maxLambda := sv[0] * sv[0] * 10
+	if minLambda <= 0 {
+		minLambda = 1e-12
+	}
+
+	nPts := 100
+	logMin := math.Log10(minLambda)
+	logMax := math.Log10(maxLambda)
+
+	// Compute log(rho) and log(eta) for each lambda
+	logRho := make([]float64, nPts)
+	logEta := make([]float64, nPts)
+	lambdas := make([]float64, nPts)
+
+	for i := 0; i < nPts; i++ {
+		logLam := logMin + (logMax-logMin)*float64(i)/float64(nPts-1)
+		lam := math.Pow(10, logLam)
+		lambdas[i] = lam
+
+		var residSq, solnSq float64
+		for j := 0; j < k; j++ {
+			sj2 := sv[j] * sv[j]
+			filter := sj2 / (sj2 + lam)
+			residSq += (1 - filter) * (1 - filter) * uTb[j] * uTb[j]
+			coeff := filter * uTb[j] / sv[j]
+			solnSq += coeff * coeff
+		}
+		logRho[i] = math.Log(math.Max(residSq, 1e-30)) / 2
+		logEta[i] = math.Log(math.Max(solnSq, 1e-30)) / 2
+	}
+
+	// Find max curvature via discrete second derivative
+	bestIdx := nPts / 2
+	bestCurv := math.Inf(-1)
+	for i := 1; i < nPts-1; i++ {
+		xpp := logRho[i+1] - 2*logRho[i] + logRho[i-1]
+		ypp := logEta[i+1] - 2*logEta[i] + logEta[i-1]
+		xp := (logRho[i+1] - logRho[i-1]) / 2
+		yp := (logEta[i+1] - logEta[i-1]) / 2
+		denom := math.Pow(xp*xp+yp*yp, 1.5)
+		if denom < 1e-30 {
+			continue
+		}
+		curv := (xp*ypp - yp*xpp) / denom
+		if curv > bestCurv {
+			bestCurv = curv
+			bestIdx = i
+		}
+	}
+
+	return lambdas[bestIdx]
 }
