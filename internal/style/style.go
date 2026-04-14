@@ -3,9 +3,14 @@ package style
 import (
 	"fmt"
 	"os"
+	"regexp"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/mattn/go-isatty"
 )
+
+var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
 // Enabled controls whether ANSI styling is applied.
 // Automatically set based on TTY detection and NO_COLOR env var.
@@ -53,6 +58,16 @@ func Green(s string) string {
 		return s
 	}
 	return "\033[32m" + s + "\033[0m"
+}
+
+// PadRight pads s to width based on visible character count,
+// correctly handling ANSI escape sequences.
+func PadRight(s string, width int) string {
+	visible := utf8.RuneCountInString(ansiRe.ReplaceAllString(s, ""))
+	if visible >= width {
+		return s
+	}
+	return s + strings.Repeat(" ", width-visible)
 }
 
 // ColorDelay returns a color-coded delay string.

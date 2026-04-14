@@ -49,8 +49,12 @@ func RenderHeatmapView(p *tomo.Problem, s *tomo.Solution, selected int, w, h int
 	}
 	b.WriteByte('\n')
 
+	// Cell styles using lipgloss (respects NO_COLOR).
+	greenCell := lipgloss.NewStyle().Background(lipgloss.Color("#2EA043")).Foreground(lipgloss.Color("#FFFFFF"))
+	yellowCell := lipgloss.NewStyle().Background(lipgloss.Color("#C8AA28")).Foreground(lipgloss.Color("#000000"))
+	redCell := lipgloss.NewStyle().Background(lipgloss.Color("#C83232")).Foreground(lipgloss.Color("#FFFFFF"))
+
 	// Matrix rows.
-	reset := "\033[0m"
 	for _, src := range nodes {
 		b.WriteString(fmt.Sprintf("%*d", labelW, src))
 		for _, dst := range nodes {
@@ -59,28 +63,24 @@ func RenderHeatmapView(p *tomo.Problem, s *tomo.Solution, selected int, w, h int
 				b.WriteString(fmt.Sprintf("%*s", colW, "·"))
 				continue
 			}
-			var bg string
-			fg := "\033[97m" // white text
+			cell := fmt.Sprintf("%*.1f", colW, d)
 			switch {
 			case d < 2:
-				bg = "\033[48;2;46;160;67m"
+				b.WriteString(greenCell.Render(cell))
 			case d <= 10:
-				bg = "\033[48;2;200;170;40m"
-				fg = "\033[30m" // black on yellow
+				b.WriteString(yellowCell.Render(cell))
 			default:
-				bg = "\033[48;2;200;50;50m"
+				b.WriteString(redCell.Render(cell))
 			}
-			cell := fmt.Sprintf("%*.1f", colW, d)
-			b.WriteString(bg + fg + cell + reset)
 		}
 		b.WriteByte('\n')
 	}
 
 	// Legend.
 	b.WriteString("\n")
-	b.WriteString("\033[48;2;46;160;67m\033[97m <2ms " + reset + " ")
-	b.WriteString("\033[48;2;200;170;40m\033[30m 2-10ms " + reset + " ")
-	b.WriteString("\033[48;2;200;50;50m\033[97m >10ms " + reset + " ")
+	b.WriteString(greenCell.Render(" <2ms ") + " ")
+	b.WriteString(yellowCell.Render(" 2-10ms ") + " ")
+	b.WriteString(redCell.Render(" >10ms ") + " ")
 	b.WriteString("· no link\n")
 
 	return styles.Panel.MaxWidth(w).MaxHeight(h).Render(

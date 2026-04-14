@@ -230,8 +230,12 @@ func printScanTable(p *tomo.Problem, sol *tomo.Solution, top int, quiet bool) {
 	}
 
 	if !quiet {
-		fmt.Printf("%-6s %-20s %-10s %-10s %-8s\n",
-			style.Bold("Link"), style.Bold("Endpoints"), style.Bold("Est(ms)"), style.Bold("Coverage"), style.Bold("Ident"))
+		fmt.Printf("%s %s %s %s %s\n",
+			style.Bold(fmt.Sprintf("%-6s", "Link")),
+			style.Bold(fmt.Sprintf("%-20s", "Endpoints")),
+			style.Bold(fmt.Sprintf("%-10s", "Est(ms)")),
+			style.Bold(fmt.Sprintf("%-10s", "Coverage")),
+			style.Bold(fmt.Sprintf("%-8s", "Ident")))
 		fmt.Println("--------------------------------------------------------------")
 	}
 
@@ -247,7 +251,7 @@ func printScanTable(p *tomo.Problem, sol *tomo.Solution, top int, quiet bool) {
 			sumEst += est
 		}
 		label := fmt.Sprintf("%d->%d", link.Src, link.Dst)
-		fmt.Printf("%-6d %-20s %-10s %-10d %-8s\n", i, label, style.ColorDelay(est), coverage, style.ColorIdent(identifiable))
+		fmt.Printf("%-6d %-20s %s %-10d %s\n", i, label, style.PadRight(style.ColorDelay(est), 10), coverage, style.PadRight(style.ColorIdent(identifiable), 8))
 	}
 
 	if identCount > 0 {

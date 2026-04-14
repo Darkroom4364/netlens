@@ -142,7 +142,7 @@ the known ground truth.`,
 				est := sol.X.AtVec(i)
 				diff := est - gt
 				ident := style.ColorIdent(q.IsIdentifiable(i))
-				fmt.Printf("%-6d %-10s %-10s %-+10.3f %-8s\n", i, style.ColorDelay(gt), style.ColorDelay(est), diff, ident)
+				fmt.Printf("%-6d %s %s %-+10.3f %s\n", i, style.PadRight(style.ColorDelay(gt), 10), style.PadRight(style.ColorDelay(est), 10), diff, style.PadRight(ident, 8))
 			}
 
 			if identCount > 0 {

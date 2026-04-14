@@ -25,7 +25,16 @@ func RenderDetailBar(p *tomo.Problem, s *tomo.Solution, linkIdx int, w int) stri
 	}
 	link := p.Links[linkIdx]
 	nodes := p.Topo.Nodes()
-	name := fmt.Sprintf("%s → %s", nodes[link.Src].Label, nodes[link.Dst].Label)
+	srcLabel, dstLabel := fmt.Sprintf("%d", link.Src), fmt.Sprintf("%d", link.Dst)
+	for _, n := range nodes {
+		if n.ID == link.Src {
+			srcLabel = n.Label
+		}
+		if n.ID == link.Dst {
+			dstLabel = n.Label
+		}
+	}
+	name := fmt.Sprintf("%s → %s", srcLabel, dstLabel)
 
 	delay := s.X.AtVec(linkIdx)
 	conf := 0.0
@@ -75,7 +84,11 @@ func RenderStatusBar(p *tomo.Problem, s *tomo.Solution, mode viewMode, solver st
 		identPct = p.Quality.IdentifiableFrac * 100
 	}
 	left := fmt.Sprintf(" %s [q]quit  solver=%s", hint, solver)
-	right := fmt.Sprintf("rank %d/%d  ident %.0f%% ", p.Quality.Rank, p.NumLinks(), identPct)
+	rank := 0
+	if p.Quality != nil {
+		rank = p.Quality.Rank
+	}
+	right := fmt.Sprintf("rank %d/%d  ident %.0f%% ", rank, p.NumLinks(), identPct)
 	gap := w - lipgloss.Width(left) - lipgloss.Width(right)
 	if gap < 0 {
 		gap = 0

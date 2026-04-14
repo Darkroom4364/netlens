@@ -52,7 +52,7 @@ routing matrix A. Higher rank means more links are identifiable.`,
 				} else {
 					gainStr = style.Dim(gainStr)
 				}
-				fmt.Printf("%-5d  %-5d  %-5d  %-10s  %-10d\n", i+1, p.Src, p.Dst, gainStr, cumRank)
+				fmt.Printf("%-5d  %-5d  %-5d  %s  %-10d\n", i+1, p.Src, p.Dst, style.PadRight(gainStr, 10), cumRank)
 			}
 
 			fmt.Println("\n" + style.Bold(fmt.Sprintf("Total probes: %d, final rank: %d / %d links", len(probes), cumRank, g.NumLinks())))

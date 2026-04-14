@@ -182,10 +182,10 @@ func FormatResults(results []BenchResult) string {
 		if r.IdentifiablePct < 100 {
 			identStr = style.Red(identStr)
 		}
-		out += fmt.Sprintf("%-20s %-10s %5d %5d %5d %4d %8.1f %s %8.4f %9.2f%% %s %8.2f\n",
-			style.Bold(r.Topology), r.Solver, r.NumNodes, r.NumLinks, r.NumPaths,
-			r.Rank, r.ConditionNumber, rmseStr, r.MAE, r.MaxRelErr*100,
-			identStr, r.DurationMs)
+		out += fmt.Sprintf("%s %-10s %5d %5d %5d %4d %8.1f %s %8.4f %9.2f%% %s %8.2f\n",
+			style.PadRight(style.Bold(r.Topology), 20), r.Solver, r.NumNodes, r.NumLinks, r.NumPaths,
+			r.Rank, r.ConditionNumber, style.PadRight(rmseStr, 8), r.MAE, r.MaxRelErr*100,
+			style.PadRight(identStr, 6), r.DurationMs)
 	}
 	return out
 }
