@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"sort"
 	"strconv"
 	"time"
 
 	"github.com/Darkroom4364/netlens/internal/format"
 	"github.com/Darkroom4364/netlens/internal/measure"
+	"github.com/Darkroom4364/netlens/internal/style"
 	"github.com/Darkroom4364/netlens/tomo"
 	"github.com/Darkroom4364/netlens/topology"
 	"github.com/spf13/cobra"
@@ -27,6 +29,7 @@ func newScanCmd() *cobra.Command {
 		stop         int64
 		maxAnonymous float64
 		useCache     bool
+		top          int
 	)
 
 	cmd := &cobra.Command{
@@ -160,8 +163,13 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 			fmt.Printf("Residual:       %.6f\n\n", sol.Residual)
 
 			// 6. Output results
+			if !style.IsTTY && outputFormat == "table" {
+				outputFormat = "json"
+			}
+
 			if outputFormat == "table" {
-				printScanTable(problem, sol)
+				quiet, _ := cmd.Flags().GetBool("quiet")
+				printScanTable(problem, sol, top, quiet)
 				return nil
 			}
 
@@ -185,6 +193,7 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 	cmd.Flags().Int64Var(&stop, "stop", now, "UNIX timestamp for RIPE Atlas result window stop")
 	cmd.Flags().Float64Var(&maxAnonymous, "max-anonymous", 0.3, "Max anonymous hop fraction before discarding path")
 	cmd.Flags().BoolVar(&useCache, "cache", false, "Cache RIPE Atlas results locally (~/.cache/netlens/)")
+	cmd.Flags().IntVar(&top, "top", 0, "Show only the N worst links (0 = show all)")
 
 	_ = cmd.MarkFlagRequired("source")
 
@@ -192,40 +201,66 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 }
 
 // printScanTable prints a human-readable per-link summary table.
-func printScanTable(p *tomo.Problem, sol *tomo.Solution) {
+func printScanTable(p *tomo.Problem, sol *tomo.Solution, top int, quiet bool) {
 	q := p.Quality
 
-	fmt.Printf("%-6s %-20s %-10s %-10s %-8s\n", "Link", "Endpoints", "Est(ms)", "Coverage", "Ident")
-	fmt.Println("--------------------------------------------------------------")
+	// Summary line
+	congested := 0
+	for i := range p.Links {
+		if q.IsIdentifiable(i) && sol.X.AtVec(i) > 20 {
+			congested++
+		}
+	}
+	fmt.Printf("\n%s  %s  %s  %s\n\n",
+		style.Bold(fmt.Sprintf("%d links", len(p.Links))),
+		style.Yellow(fmt.Sprintf("%d congested", congested)),
+		fmt.Sprintf("RMSE —"),
+		fmt.Sprintf("%.0f%% identifiable", q.IdentifiableFrac*100))
+
+	// Build sorted index (descending by estimated delay)
+	idx := make([]int, len(p.Links))
+	for i := range idx {
+		idx[i] = i
+	}
+	sort.Slice(idx, func(a, b int) bool {
+		return sol.X.AtVec(idx[a]) > sol.X.AtVec(idx[b])
+	})
+	if top > 0 && top < len(idx) {
+		idx = idx[:top]
+	}
+
+	if !quiet {
+		fmt.Printf("%-6s %-20s %-10s %-10s %-8s\n",
+			style.Bold("Link"), style.Bold("Endpoints"), style.Bold("Est(ms)"), style.Bold("Coverage"), style.Bold("Ident"))
+		fmt.Println("--------------------------------------------------------------")
+	}
 
 	var identCount int
 	var sumEst float64
-	for i, link := range p.Links {
+	for _, i := range idx {
+		link := p.Links[i]
 		est := sol.X.AtVec(i)
 		coverage := q.CoveragePerLink[i]
-		ident := "yes"
-		if !q.IsIdentifiable(i) {
-			ident = "NO"
-		} else {
+		identifiable := q.IsIdentifiable(i)
+		if identifiable {
 			identCount++
 			sumEst += est
 		}
 		label := fmt.Sprintf("%d->%d", link.Src, link.Dst)
-		fmt.Printf("%-6d %-20s %-10.3f %-10d %-8s\n", i, label, est, coverage, ident)
+		fmt.Printf("%-6d %-20s %-10s %-10d %-8s\n", i, label, style.ColorDelay(est), coverage, style.ColorIdent(identifiable))
 	}
 
 	if identCount > 0 {
 		mean := sumEst / float64(identCount)
-		// Compute stddev of identifiable link estimates
 		var sumSqDiff float64
-		for i := range p.Links {
+		for _, i := range idx {
 			if q.IsIdentifiable(i) {
 				diff := sol.X.AtVec(i) - mean
 				sumSqDiff += diff * diff
 			}
 		}
 		stddev := math.Sqrt(sumSqDiff / float64(identCount))
-		fmt.Printf("\nIdentifiable links: %d / %d\n", identCount, len(p.Links))
+		fmt.Printf("\nIdentifiable links: %d / %d\n", identCount, len(idx))
 		fmt.Printf("Mean estimate:      %.4f ms\n", mean)
 		fmt.Printf("Std dev:            %.4f ms\n", stddev)
 	}
