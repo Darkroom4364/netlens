@@ -38,7 +38,14 @@ func newScanCmd() *cobra.Command {
 		Long: `Fetches traceroute measurements from RIPE Atlas or a local file,
 infers the network topology, builds the routing matrix, runs identifiability
 analysis, solves the inverse problem, and outputs per-link estimates.`,
+		Example: `  netlens scan --source ripe --msm 1001 --cache
+  netlens scan --source traceroute --file traces.json -m tikhonov --top 20
+  netlens scan --source ripe --msm 1001 -f json > results.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if maxAnonymous < 0 || maxAnonymous > 1 {
+				return fmt.Errorf("--max-anonymous must be in [0, 1] (got %.4f)", maxAnonymous)
+			}
+
 			// 1. Load measurements
 			var measurements []tomo.PathMeasurement
 			var err error
@@ -146,7 +153,10 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 			}
 
 			// 5. Solve with selected method
-			solver := getSolver(method)
+			solver, err := getSolver(method)
+			if err != nil {
+				return err
+			}
 			sol, err := solver.Solve(problem)
 			if err != nil {
 				return fmt.Errorf("solve: %w", err)
@@ -161,7 +171,7 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 					}
 				}
 				if negCount > 0 {
-					_, _ = fmt.Fprintf(os.Stderr, "Warning: %d links have negative delay estimates (physically impossible). Consider using --method nnls to enforce non-negativity.\n", negCount)
+					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: %d links have negative delay estimates (physically impossible). Consider using --method nnls to enforce non-negativity.\n", negCount)
 				}
 			}
 

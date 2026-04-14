@@ -22,6 +22,8 @@ func newPlanCmd() *cobra.Command {
 		Long: `Greedy measurement design: given a network topology, recommend which
 source-destination pairs to probe in order to maximize the rank of the
 routing matrix A. Higher rank means more links are identifiable.`,
+		Example: `  netlens plan -t testdata/topologies/Abilene.graphml
+  netlens plan -t network.graphml --budget 50`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			g, err := topology.LoadGraphML(topoFile)
 			if err != nil {

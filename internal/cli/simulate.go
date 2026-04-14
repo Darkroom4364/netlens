@@ -33,7 +33,23 @@ func newSimulateCmd() *cobra.Command {
 		Long: `Loads a Topology Zoo GraphML file, assigns synthetic link delays with
 configurable noise, runs the selected solver, and reports accuracy against
 the known ground truth.`,
+		Example: `  netlens simulate -t testdata/topologies/Abilene.graphml
+  netlens simulate -t network.graphml -m nnls --noise 0.2 --top 10
+  netlens simulate -t network.graphml -m admm --congestion-links 5 --seed 0`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if noiseScale < 0 {
+				return fmt.Errorf("--noise must be >= 0 (got %.4f)", noiseScale)
+			}
+			if pathFraction <= 0 || pathFraction > 1 {
+				return fmt.Errorf("--path-fraction must be in (0, 1] (got %.4f)", pathFraction)
+			}
+			if congestionFactor <= 0 {
+				return fmt.Errorf("--congestion-factor must be > 0 (got %.4f)", congestionFactor)
+			}
+			if samplesPerPath < 1 {
+				return fmt.Errorf("--samples must be >= 1 (got %d)", samplesPerPath)
+			}
+
 			g, err := topology.LoadGraphML(topoFile)
 			if err != nil {
 				return fmt.Errorf("load topology: %w", err)
@@ -54,7 +70,10 @@ the known ground truth.`,
 				return fmt.Errorf("simulate: %w", err)
 			}
 
-			solver := getSolver(method)
+			solver, err := getSolver(method)
+			if err != nil {
+				return err
+			}
 			sol, err := solver.Solve(sim.Problem)
 			if err != nil {
 				return fmt.Errorf("solve: %w", err)
@@ -155,7 +174,7 @@ the known ground truth.`,
 	}
 
 	cmd.Flags().StringVarP(&topoFile, "topology", "t", "", "Path to Topology Zoo GraphML file (required)")
-	cmd.Flags().StringVarP(&method, "method", "m", "tikhonov", "Solver method: tsvd, tikhonov, nnls, admm, irl1, vardi, tomogravity")
+	cmd.Flags().StringVarP(&method, "method", "m", "tikhonov", "Solver method: tsvd, tikhonov, nnls, admm, irl1, vardi, tomogravity, laplacian")
 	cmd.Flags().Float64Var(&noiseScale, "noise", 0.1, "Noise scale (relative, e.g., 0.1 = 10%)")
 	cmd.Flags().StringVar(&noiseModel, "noise-model", "lognormal", "Noise model: lognormal, gaussian")
 	cmd.Flags().IntVar(&congestionLinks, "congestion-links", 2, "Number of congested links")
@@ -169,23 +188,25 @@ the known ground truth.`,
 	return cmd
 }
 
-func getSolver(name string) tomo.Solver {
+func getSolver(name string) (tomo.Solver, error) {
 	switch name {
 	case "tsvd":
-		return &tomo.TSVDSolver{}
+		return &tomo.TSVDSolver{}, nil
+	case "tikhonov":
+		return &tomo.TikhonovSolver{}, nil
 	case "nnls":
-		return &tomo.NNLSSolver{}
+		return &tomo.NNLSSolver{}, nil
 	case "admm":
-		return &tomo.ADMMSolver{}
+		return &tomo.ADMMSolver{}, nil
 	case "irl1":
-		return &tomo.IRL1Solver{}
+		return &tomo.IRL1Solver{}, nil
 	case "vardi":
-		return &tomo.VardiEMSolver{}
+		return &tomo.VardiEMSolver{}, nil
 	case "tomogravity":
-		return &tomo.TomogravitySolver{}
+		return &tomo.TomogravitySolver{}, nil
 	case "laplacian":
-		return &tomo.LaplacianSolver{}
+		return &tomo.LaplacianSolver{}, nil
 	default:
-		return &tomo.TikhonovSolver{}
+		return nil, fmt.Errorf("unknown solver method %q; valid: tsvd, tikhonov, nnls, admm, irl1, vardi, tomogravity, laplacian", name)
 	}
 }
