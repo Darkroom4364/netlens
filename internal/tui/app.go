@@ -122,7 +122,7 @@ func (m Model) View() string {
 	main = lipgloss.NewStyle().Width(m.width).Height(mainH).Render(main)
 
 	// Detail bar.
-	detail := renderDetailBar(m.problem, m.solution, m.selectedLink, m.width)
+	detail := RenderDetailBar(m.problem, m.solution, m.selectedLink, m.width)
 	detail = lipgloss.NewStyle().Width(m.width).Render(detail)
 
 	// Status bar.
@@ -130,7 +130,7 @@ func (m Model) View() string {
 	if m.solver != nil {
 		solverName = m.solver.Name()
 	}
-	status := renderStatusBar(m.problem, m.solution, m.mode, solverName, m.width)
+	status := RenderStatusBar(m.problem, m.solution, m.mode, solverName, m.width)
 	status = lipgloss.NewStyle().Width(m.width).Render(status)
 
 	return lipgloss.JoinVertical(lipgloss.Left, main, detail, status)
@@ -148,14 +148,3 @@ func renderHeatmap(_ *tomo.Problem, _ *tomo.Solution, _ int, w, h int) string {
 	return fmt.Sprintf("Heatmap (%dx%d)", w, h)
 }
 
-func renderDetailBar(_ *tomo.Problem, _ *tomo.Solution, _ int, w int) string {
-	return fmt.Sprintf("Detail Bar (w=%d)", w)
-}
-
-func renderStatusBar(_ *tomo.Problem, _ *tomo.Solution, mode viewMode, solver string, w int) string {
-	label := "tree"
-	if mode == viewHeatmap {
-		label = "heatmap"
-	}
-	return fmt.Sprintf("Status | mode=%s solver=%s (w=%d)", label, solver, w)
-}
