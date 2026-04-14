@@ -214,7 +214,7 @@ func printScanTable(p *tomo.Problem, sol *tomo.Solution, top int, quiet bool) {
 	fmt.Printf("\n%s  %s  %s  %s\n\n",
 		style.Bold(fmt.Sprintf("%d links", len(p.Links))),
 		style.Yellow(fmt.Sprintf("%d congested", congested)),
-		fmt.Sprintf("RMSE —"),
+		"RMSE —",
 		fmt.Sprintf("%.0f%% identifiable", q.IdentifiableFrac*100))
 
 	// Build sorted index (descending by estimated delay)
