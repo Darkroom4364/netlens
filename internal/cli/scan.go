@@ -105,7 +105,10 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 			if len(measurements) == 0 {
 				return fmt.Errorf("no measurements loaded")
 			}
-			fmt.Printf("Loaded %d measurements from %s\n", len(measurements), source)
+			quiet, _ := cmd.Flags().GetBool("quiet")
+			if !quiet {
+				fmt.Printf("Loaded %d measurements from %s\n", len(measurements), source)
+			}
 
 			// 2. Infer topology from traceroute hops
 			opts := topology.InferOpts{
@@ -123,8 +126,10 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 				accepted[i] = measurements[idx]
 			}
 
-			fmt.Printf("Topology:       %d nodes, %d links\n", graph.NumNodes(), graph.NumLinks())
-			fmt.Printf("Paths:          %d (of %d measurements)\n", len(pathSpecs), len(measurements))
+			if !quiet {
+				fmt.Printf("Topology:       %d nodes, %d links\n", graph.NumNodes(), graph.NumLinks())
+				fmt.Printf("Paths:          %d (of %d measurements)\n", len(pathSpecs), len(measurements))
+			}
 
 			// 3. Build routing matrix + Problem
 			problem, err := tomo.BuildProblemFromMeasurements(graph, accepted, pathSpecs)
@@ -134,9 +139,11 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 
 			// 4. Identifiability analysis (already computed in BuildProblem)
 			q := problem.Quality
-			fmt.Printf("Matrix rank:    %d / %d (identifiable: %.0f%%)\n",
-				q.Rank, q.NumLinks, q.IdentifiableFrac*100)
-			fmt.Printf("Condition:      %.2f\n", q.ConditionNumber)
+			if !quiet {
+				fmt.Printf("Matrix rank:    %d / %d (identifiable: %.0f%%)\n",
+					q.Rank, q.NumLinks, q.IdentifiableFrac*100)
+				fmt.Printf("Condition:      %.2f\n", q.ConditionNumber)
+			}
 
 			// 5. Solve with selected method
 			solver := getSolver(method)
@@ -158,9 +165,11 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 				}
 			}
 
-			fmt.Printf("Solver:         %s\n", sol.Method)
-			fmt.Printf("Duration:       %v\n", sol.Duration)
-			fmt.Printf("Residual:       %.6f\n\n", sol.Residual)
+			if !quiet {
+				fmt.Printf("Solver:         %s\n", sol.Method)
+				fmt.Printf("Duration:       %v\n", sol.Duration)
+				fmt.Printf("Residual:       %.6f\n\n", sol.Residual)
+			}
 
 			// 6. Output results
 			if !style.IsTTY && outputFormat == "table" {
@@ -168,7 +177,6 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 			}
 
 			if outputFormat == "table" {
-				quiet, _ := cmd.Flags().GetBool("quiet")
 				printScanTable(problem, sol, top, quiet)
 				return nil
 			}
