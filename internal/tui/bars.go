@@ -60,11 +60,16 @@ func RenderDetailBar(p *tomo.Problem, s *tomo.Solution, linkIdx int, w int) stri
 		sigma = (delay - mean) / stddev
 	}
 
-	ident := "yes"
-	if !p.Quality.IsIdentifiable(linkIdx) {
-		ident = "no"
+	ident := "unknown"
+	paths := 0
+	if p.Quality != nil {
+		if p.Quality.IsIdentifiable(linkIdx) {
+			ident = "yes"
+		} else {
+			ident = "no"
+		}
+		paths = p.Quality.CoveragePerLink[linkIdx]
 	}
-	paths := p.Quality.CoveragePerLink[linkIdx]
 
 	line := fmt.Sprintf("%s  %.2fms ±%.2f  σ=%.1f  paths=%d  ident=%s", name, delay, conf, sigma, paths, ident)
 	if delay > 20 {
