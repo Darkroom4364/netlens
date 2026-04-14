@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/Darkroom4364/netlens/internal/plan"
+	"github.com/Darkroom4364/netlens/internal/style"
 	"github.com/Darkroom4364/netlens/topology"
 	"github.com/spf13/cobra"
 )
@@ -28,8 +29,8 @@ routing matrix A. Higher rank means more links are identifiable.`,
 			}
 
 			topoName := filepath.Base(topoFile)
-			fmt.Printf("Topology:  %s (%d nodes, %d links)\n", topoName, g.NumNodes(), g.NumLinks())
-			fmt.Printf("Budget:    %d probes\n\n", budget)
+			fmt.Printf("%s  %s (%d nodes, %d links)\n", style.Bold("Topology:"), topoName, g.NumNodes(), g.NumLinks())
+			fmt.Printf("%s    %d probes\n\n", style.Bold("Budget:"), budget)
 
 			probes := plan.RecommendProbes(g, nil, budget)
 
@@ -45,10 +46,16 @@ routing matrix A. Higher rank means more links are identifiable.`,
 			cumRank := 0
 			for i, p := range probes {
 				cumRank += p.RankGain
-				fmt.Printf("%-5d  %-5d  %-5d  %-10d  %-10d\n", i+1, p.Src, p.Dst, p.RankGain, cumRank)
+				gainStr := fmt.Sprintf("%d", p.RankGain)
+				if p.RankGain > 0 {
+					gainStr = style.Green(gainStr)
+				} else {
+					gainStr = style.Dim(gainStr)
+				}
+				fmt.Printf("%-5d  %-5d  %-5d  %-10s  %-10d\n", i+1, p.Src, p.Dst, gainStr, cumRank)
 			}
 
-			fmt.Printf("\nTotal probes: %d, final rank: %d / %d links\n", len(probes), cumRank, g.NumLinks())
+			fmt.Println("\n" + style.Bold(fmt.Sprintf("Total probes: %d, final rank: %d / %d links", len(probes), cumRank, g.NumLinks())))
 			if cumRank == g.NumLinks() {
 				fmt.Println("Full rank achieved: all links identifiable.")
 			} else {
