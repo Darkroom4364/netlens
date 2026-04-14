@@ -66,7 +66,7 @@ the known ground truth.`,
 					}
 				}
 				if negCount > 0 {
-					fmt.Fprintf(cmd.ErrOrStderr(), "Warning: %d links have negative delay estimates (physically impossible). Consider using --method nnls to enforce non-negativity.\n", negCount)
+					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: %d links have negative delay estimates (physically impossible). Consider using --method nnls to enforce non-negativity.\n", negCount)
 				}
 			}
 

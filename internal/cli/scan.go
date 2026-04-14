@@ -151,7 +151,7 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 					}
 				}
 				if negCount > 0 {
-					fmt.Fprintf(os.Stderr, "Warning: %d links have negative delay estimates (physically impossible). Consider using --method nnls to enforce non-negativity.\n", negCount)
+					_, _ = fmt.Fprintf(os.Stderr, "Warning: %d links have negative delay estimates (physically impossible). Consider using --method nnls to enforce non-negativity.\n", negCount)
 				}
 			}
 

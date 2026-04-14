@@ -23,18 +23,23 @@ func executeCommand(args ...string) (string, error) {
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
+	defer func() { os.Stdout = oldStdout }()
 
-	err := cmd.Execute()
+	var errExec error
+	errExec = cmd.Execute()
 
-	w.Close()
-	os.Stdout = oldStdout
+	if err := w.Close(); err != nil && errExec == nil {
+		errExec = err
+	}
 
 	captured, _ := io.ReadAll(r)
-	r.Close()
+	if err := r.Close(); err != nil && errExec == nil {
+		errExec = err
+	}
 
 	// Merge cobra buffer and captured stdout.
 	out := buf.String() + string(captured)
-	return out, err
+	return out, errExec
 }
 
 // --- Tests ---

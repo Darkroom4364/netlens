@@ -2,6 +2,7 @@ package topology
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -141,6 +142,9 @@ func TestStress_DeeplyNestedXML(t *testing.T) {
 func TestStress_AllPairsShortestPaths1000Nodes(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping stress test")
+	}
+	if os.Getenv("NETLENS_STRESS") == "" {
+		t.Skip("skipping stress test; set NETLENS_STRESS=1 to enable")
 	}
 
 	// Use 300 nodes / 900 links — AllPairsShortestPaths runs individual

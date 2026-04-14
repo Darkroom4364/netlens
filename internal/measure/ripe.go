@@ -340,7 +340,7 @@ func (s *RIPEAtlasSource) doGet(ctx context.Context, rawURL string) ([]byte, err
 		}
 
 		body, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if err != nil {
 			return nil, fmt.Errorf("read response body: %w", err)
 		}

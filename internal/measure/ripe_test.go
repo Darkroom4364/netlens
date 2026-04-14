@@ -101,24 +101,24 @@ func newMockServer(t *testing.T) *httptest.Server {
 		switch {
 		case r.URL.Path == "/measurements/12345/results/":
 			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprint(w, mockTracerouteResults)
+			_, _ = fmt.Fprint(w, mockTracerouteResults)
 
 		case r.URL.Path == "/measurements/12345/":
 			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprint(w, mockMeasurementStatus)
+			_, _ = fmt.Fprint(w, mockMeasurementStatus)
 
 		case r.URL.Path == "/measurements/" && r.URL.RawQuery != "":
 			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprint(w, mockSearchResults)
+			_, _ = fmt.Fprint(w, mockSearchResults)
 
 		case r.URL.Path == "/measurements/99999/results/":
 			w.WriteHeader(http.StatusTooManyRequests)
 			w.Header().Set("Retry-After", "1")
-			fmt.Fprint(w, `{"error": "rate limited"}`)
+			_, _ = fmt.Fprint(w, `{"error": "rate limited"}`)
 
 		default:
 			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(w, `{"error": "not found: %s"}`, r.URL.Path)
+			_, _ = fmt.Fprintf(w, `{"error": "not found: %s"}`, r.URL.Path)
 		}
 	}))
 }
@@ -241,7 +241,7 @@ func TestIterator(t *testing.T) {
 	ctx := context.Background()
 
 	iter := src.Iter(ctx, 12345, 0, 0)
-	defer iter.Close()
+	defer func() { _ = iter.Close() }()
 
 	var count int
 	for iter.Next() {
@@ -264,7 +264,7 @@ func TestAuthHeader(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotAuth = r.Header.Get("Authorization")
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, mockMeasurementStatus)
+		_, _ = fmt.Fprint(w, mockMeasurementStatus)
 	}))
 	defer srv.Close()
 
@@ -287,11 +287,11 @@ func TestRateLimitRetry(t *testing.T) {
 		if attempts <= 2 {
 			w.Header().Set("Retry-After", "0")
 			w.WriteHeader(http.StatusTooManyRequests)
-			fmt.Fprint(w, `{"error":"rate limited"}`)
+			_, _ = fmt.Fprint(w, `{"error":"rate limited"}`)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, mockTracerouteResults)
+		_, _ = fmt.Fprint(w, mockTracerouteResults)
 	}))
 	defer srv.Close()
 
@@ -311,7 +311,7 @@ func TestRateLimitRetry(t *testing.T) {
 func TestHTTPError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(w, `{"detail":"Not found."}`)
+		_, _ = fmt.Fprint(w, `{"detail":"Not found."}`)
 	}))
 	defer srv.Close()
 
@@ -364,7 +364,7 @@ func TestPaginatedSearch(t *testing.T) {
 				return "null"
 			}(),
 			string(item1), string(item2))
-		fmt.Fprint(w, resp)
+		_, _ = fmt.Fprint(w, resp)
 	}))
 	defer srv.Close()
 
