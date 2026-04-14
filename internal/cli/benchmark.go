@@ -29,6 +29,9 @@ func newBenchmarkCmd() *cobra.Command {
 		Short: "Run all solvers on all topologies and compare accuracy",
 		Long: `Loads all GraphML files from a directory, simulates measurements with
 configurable noise, runs every solver, and produces a comparison table.`,
+		Example: `  netlens benchmark -t testdata/topologies
+  netlens benchmark --synthetic --noise 0.2
+  netlens benchmark -t ./topos --congestion-links 5 --seed 0`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg := measure.SimConfig{
 				NoiseScale:       noiseScale,

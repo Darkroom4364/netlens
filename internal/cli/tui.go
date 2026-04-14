@@ -33,7 +33,10 @@ func newTUICmd() *cobra.Command {
 				return fmt.Errorf("simulate: %w", err)
 			}
 
-			solver := getSolver(method)
+			solver, err := getSolver(method)
+			if err != nil {
+				return err
+			}
 			sol, err := solver.Solve(sim.Problem)
 			if err != nil {
 				return fmt.Errorf("solve: %w", err)

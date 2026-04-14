@@ -111,14 +111,13 @@ func TestCLI_SimulateNonexistentTopology(t *testing.T) {
 	}
 }
 
-func TestCLI_SimulateUnknownSolverFallsToDefault(t *testing.T) {
-	out, err := executeCommand("simulate", "-t", "../../testdata/topologies/abilene.graphml", "-m", "unknown_solver")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+func TestCLI_SimulateUnknownSolverReturnsError(t *testing.T) {
+	_, err := executeCommand("simulate", "-t", "../../testdata/topologies/abilene.graphml", "-m", "unknown_solver")
+	if err == nil {
+		t.Fatal("expected error for unknown solver method, got nil")
 	}
-	// The default solver is tikhonov
-	if !strings.Contains(out, "Solver:") {
-		t.Fatalf("expected output to contain 'Solver:', got:\n%s", out)
+	if !strings.Contains(err.Error(), "unknown solver method") {
+		t.Fatalf("expected 'unknown solver method' error, got: %v", err)
 	}
 }
 

@@ -109,6 +109,9 @@ func TestConformalCoverageGuarantee(t *testing.T) {
 	}
 	rate := float64(covered) / float64(nTrials)
 	t.Logf("coverage rate: %.2f (target >= %.2f)", rate, 1-alpha)
+	if rate < 0.70 {
+		t.Errorf("coverage rate %.2f is below minimum threshold 0.70 for target %.2f", rate, 1-alpha)
+	}
 }
 
 func TestConformalCalibrationFrac(t *testing.T) {
@@ -129,6 +132,17 @@ func TestConformalCalibrationFrac(t *testing.T) {
 	}
 	t.Logf("frac=0.2 CI[0]=%.4f  frac=0.5 CI[0]=%.4f",
 		sol02.Confidence.AtVec(0), sol05.Confidence.AtVec(0))
+	for j := 0; j < p.NumLinks(); j++ {
+		if sol02.Confidence.AtVec(j) < 0 {
+			t.Errorf("frac=0.2: link %d has negative CI width %.4f", j, sol02.Confidence.AtVec(j))
+		}
+		if sol05.Confidence.AtVec(j) < 0 {
+			t.Errorf("frac=0.5: link %d has negative CI width %.4f", j, sol05.Confidence.AtVec(j))
+		}
+	}
+	if sol02.Confidence.AtVec(0) == sol05.Confidence.AtVec(0) {
+		t.Error("expected different CI widths for different calibration fractions, but they are equal")
+	}
 }
 
 func TestConformalDegeneratetwoPaths(t *testing.T) {

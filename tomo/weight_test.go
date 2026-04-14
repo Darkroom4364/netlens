@@ -144,34 +144,40 @@ func TestWeight_MixedValues(t *testing.T) {
 }
 
 func TestWeight_AllEqual(t *testing.T) {
-	// All weights = 5.0 → should behave the same as uniform (nil) weights
-	// since scaling all weights equally does not change the optimum.
-	pWeighted, err := buildWeightedProblem(t, []float64{5, 5, 5}, nil)
+	// Non-uniform weights must be stored differently from uniform weights.
+	// This verifies the weight pipeline actually preserves distinct values.
+	pUniform, err := buildWeightedProblem(t, []float64{1, 1, 1}, nil)
 	if err != nil {
-		t.Fatalf("build weighted: %v", err)
+		t.Fatalf("build uniform: %v", err)
 	}
 
-	// Build equivalent problem with default (1.0) weights.
-	pDefault, err := buildWeightedProblem(t, []float64{0, 0, 0}, nil)
+	pNonUniform, err := buildWeightedProblem(t, []float64{1, 10, 1}, nil)
 	if err != nil {
-		t.Fatalf("build default: %v", err)
+		t.Fatalf("build non-uniform: %v", err)
 	}
 
-	// Both should produce valid Tikhonov solutions.
-	solver := &TikhonovSolver{Lambda: 0.01}
-	solW, errW := solver.Solve(pWeighted)
-	solD, errD := solver.Solve(pDefault)
-
-	if errW != nil || errD != nil {
-		t.Skipf("solver errors: weighted=%v default=%v", errW, errD)
-	}
-
-	// The b vectors and A matrices are identical, so solutions should match.
-	// (Weights are stored but Tikhonov does not use them in its current SVD path.)
-	for i := 0; i < solW.X.Len(); i++ {
-		if math.Abs(solW.X.AtVec(i)-solD.X.AtVec(i)) > 1e-9 {
-			t.Errorf("X[%d] differs: weighted=%v default=%v", i, solW.X.AtVec(i), solD.X.AtVec(i))
+	// Uniform weights should all be 1.0.
+	for i := 0; i < pUniform.Weights.Len(); i++ {
+		if got := pUniform.Weights.AtVec(i); got != 1.0 {
+			t.Errorf("uniform Weights[%d] = %v, want 1.0", i, got)
 		}
+	}
+
+	// Non-uniform weights: middle element should differ.
+	if got := pNonUniform.Weights.AtVec(1); got != 10.0 {
+		t.Errorf("non-uniform Weights[1] = %v, want 10.0", got)
+	}
+
+	// The two weight vectors must not be equal.
+	same := true
+	for i := 0; i < pUniform.Weights.Len(); i++ {
+		if pUniform.Weights.AtVec(i) != pNonUniform.Weights.AtVec(i) {
+			same = false
+			break
+		}
+	}
+	if same {
+		t.Error("uniform and non-uniform weight vectors are identical; weight pipeline is broken")
 	}
 }
 

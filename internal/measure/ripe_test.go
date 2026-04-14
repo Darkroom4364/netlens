@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -281,10 +282,10 @@ func TestAuthHeader(t *testing.T) {
 }
 
 func TestRateLimitRetry(t *testing.T) {
-	attempts := 0
+	var attempts int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		attempts++
-		if attempts <= 2 {
+		n := atomic.AddInt32(&attempts, 1)
+		if n <= 2 {
 			w.Header().Set("Retry-After", "0")
 			w.WriteHeader(http.StatusTooManyRequests)
 			_, _ = fmt.Fprint(w, `{"error":"rate limited"}`)
@@ -303,8 +304,8 @@ func TestRateLimitRetry(t *testing.T) {
 	if len(results) != 1 {
 		t.Errorf("got %d results, want 1", len(results))
 	}
-	if attempts != 3 {
-		t.Errorf("attempts = %d, want 3", attempts)
+	if got := atomic.LoadInt32(&attempts); got != 3 {
+		t.Errorf("attempts = %d, want 3", got)
 	}
 }
 

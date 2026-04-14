@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Darkroom4364/netlens/internal/style"
 	"github.com/spf13/cobra"
 )
 
@@ -22,6 +23,16 @@ Feed it traceroutes. See the invisible.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
+	}
+
+	root.PersistentFlags().Bool("no-color", false, "Disable colored output")
+	root.PersistentFlags().Bool("quiet", false, "Suppress verbose output, show only summary and results")
+
+	root.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		noColor, _ := cmd.Flags().GetBool("no-color")
+		if noColor {
+			style.SetEnabled(false)
+		}
 	}
 
 	root.AddCommand(newVersionCmd())

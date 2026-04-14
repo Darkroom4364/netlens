@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/Darkroom4364/netlens/internal/measure"
+	"github.com/Darkroom4364/netlens/internal/style"
 	"github.com/Darkroom4364/netlens/tomo"
 	"github.com/Darkroom4364/netlens/topology"
 	"gonum.org/v1/gonum/mat"
@@ -159,8 +160,8 @@ func computeDetectionRate(gt []float64, est *mat.VecDense, quality *tomo.MatrixQ
 
 // FormatResults produces a human-readable table of benchmark results.
 func FormatResults(results []BenchResult) string {
-	header := fmt.Sprintf("%-20s %-10s %5s %5s %5s %4s %8s %8s %8s %10s %6s %8s\n",
-		"Topology", "Solver", "Nodes", "Links", "Paths", "Rank", "Cond", "RMSE", "MAE", "MaxRelErr", "Ident", "Time(ms)")
+	header := style.Bold(fmt.Sprintf("%-20s %-10s %5s %5s %5s %4s %8s %8s %8s %10s %6s %8s",
+		"Topology", "Solver", "Nodes", "Links", "Paths", "Rank", "Cond", "RMSE", "MAE", "MaxRelErr", "Ident", "Time(ms)")) + "\n"
 	divider := ""
 	for i := 0; i < 110; i++ {
 		divider += "-"
@@ -169,10 +170,22 @@ func FormatResults(results []BenchResult) string {
 
 	out := header + divider
 	for _, r := range results {
-		out += fmt.Sprintf("%-20s %-10s %5d %5d %5d %4d %8.1f %8.4f %8.4f %9.2f%% %5.0f%% %8.2f\n",
-			r.Topology, r.Solver, r.NumNodes, r.NumLinks, r.NumPaths,
-			r.Rank, r.ConditionNumber, r.RMSE, r.MAE, r.MaxRelErr*100,
-			r.IdentifiablePct, r.DurationMs)
+		rmseStr := fmt.Sprintf("%8.4f", r.RMSE)
+		if r.RMSE < 5 {
+			rmseStr = style.Green(rmseStr)
+		} else if r.RMSE <= 20 {
+			rmseStr = style.Yellow(rmseStr)
+		} else {
+			rmseStr = style.Red(rmseStr)
+		}
+		identStr := fmt.Sprintf("%5.0f%%", r.IdentifiablePct)
+		if r.IdentifiablePct < 100 {
+			identStr = style.Red(identStr)
+		}
+		out += fmt.Sprintf("%s %-10s %5d %5d %5d %4d %8.1f %s %8.4f %9.2f%% %s %8.2f\n",
+			style.PadRight(style.Bold(r.Topology), 20), r.Solver, r.NumNodes, r.NumLinks, r.NumPaths,
+			r.Rank, r.ConditionNumber, style.PadRight(rmseStr, 8), r.MAE, r.MaxRelErr*100,
+			style.PadRight(identStr, 6), r.DurationMs)
 	}
 	return out
 }
