@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"math"
 	"path/filepath"
+	"sort"
 
 	"github.com/Darkroom4364/netlens/internal/measure"
+	"github.com/Darkroom4364/netlens/internal/style"
 	"github.com/Darkroom4364/netlens/tomo"
 	"github.com/Darkroom4364/netlens/topology"
 	"github.com/spf13/cobra"
@@ -13,15 +15,16 @@ import (
 
 func newSimulateCmd() *cobra.Command {
 	var (
-		topoFile        string
-		method          string
-		noiseScale      float64
-		noiseModel      string
-		congestionLinks int
+		topoFile         string
+		method           string
+		noiseScale       float64
+		noiseModel       string
+		congestionLinks  int
 		congestionFactor float64
-		samplesPerPath  int
-		seed            int64
-		pathFraction    float64
+		samplesPerPath   int
+		seed             int64
+		pathFraction     float64
+		top              int
 	)
 
 	cmd := &cobra.Command{
@@ -73,38 +76,76 @@ the known ground truth.`,
 			// Print results
 			topoName := filepath.Base(topoFile)
 			q := sim.Problem.Quality
+			p := sim.Problem
 
-			fmt.Printf("Topology:       %s (%d nodes, %d links)\n", topoName, g.NumNodes(), g.NumLinks())
-			fmt.Printf("Paths:          %d\n", sim.Problem.NumPaths())
-			fmt.Printf("Matrix rank:    %d / %d (identifiable: %.0f%%)\n",
-				q.Rank, q.NumLinks, q.IdentifiableFrac*100)
-			fmt.Printf("Condition:      %.2f\n", q.ConditionNumber)
-			fmt.Printf("Solver:         %s\n", sol.Method)
-			fmt.Printf("Duration:       %v\n", sol.Duration)
-			fmt.Printf("Residual:       %.6f\n\n", sol.Residual)
+			quiet, _ := cmd.Flags().GetBool("quiet")
+			if !quiet {
+				fmt.Printf("Topology:       %s (%d nodes, %d links)\n", topoName, g.NumNodes(), g.NumLinks())
+				fmt.Printf("Paths:          %d\n", sim.Problem.NumPaths())
+				fmt.Printf("Matrix rank:    %d / %d (identifiable: %.0f%%)\n",
+					q.Rank, q.NumLinks, q.IdentifiableFrac*100)
+				fmt.Printf("Condition:      %.2f\n", q.ConditionNumber)
+				fmt.Printf("Solver:         %s\n", sol.Method)
+				fmt.Printf("Duration:       %v\n", sol.Duration)
+				fmt.Printf("Residual:       %.6f\n", sol.Residual)
+			}
 
-			// Per-link comparison
-			fmt.Printf("%-6s %-10s %-10s %-10s %-8s\n", "Link", "Truth(ms)", "Est(ms)", "Error(ms)", "Ident")
-			fmt.Println("------------------------------------------------------")
+			// Compute error metrics first for summary line
 			var sumSqErr, sumAbsErr float64
 			identCount := 0
 			for i, gt := range sim.GroundTruth {
 				est := sol.X.AtVec(i)
 				diff := est - gt
-				ident := "yes"
-				if !q.IsIdentifiable(i) {
-					ident = "NO"
-				} else {
+				if q.IsIdentifiable(i) {
 					identCount++
 					sumSqErr += diff * diff
 					sumAbsErr += math.Abs(diff)
 				}
-				fmt.Printf("%-6d %-10.3f %-10.3f %-+10.3f %-8s\n", i, gt, est, diff, ident)
+			}
+
+			var rmse, mae float64
+			if identCount > 0 {
+				rmse = math.Sqrt(sumSqErr / float64(identCount))
+				mae = sumAbsErr / float64(identCount)
+			}
+
+			// Summary line
+			congested := 0
+			for i := 0; i < p.NumLinks(); i++ {
+				if sol.X.AtVec(i) > 20 {
+					congested++
+				}
+			}
+			fmt.Printf("\n%s  %s  %s  %s\n\n",
+				style.Bold(fmt.Sprintf("%d links", p.NumLinks())),
+				style.Yellow(fmt.Sprintf("%d congested", congested)),
+				fmt.Sprintf("RMSE %.2fms", rmse),
+				fmt.Sprintf("%.0f%% identifiable", q.IdentifiableFrac*100))
+
+			// Sort links by delay descending
+			indices := make([]int, len(sim.GroundTruth))
+			for i := range indices {
+				indices[i] = i
+			}
+			sort.Slice(indices, func(a, b int) bool {
+				return sol.X.AtVec(indices[a]) > sol.X.AtVec(indices[b])
+			})
+			if top > 0 && top < len(indices) {
+				indices = indices[:top]
+			}
+
+			// Per-link comparison
+			fmt.Printf("%s\n", style.Bold(fmt.Sprintf("%-6s %-10s %-10s %-10s %-8s", "Link", "Truth(ms)", "Est(ms)", "Error(ms)", "Ident")))
+			fmt.Println("------------------------------------------------------")
+			for _, i := range indices {
+				gt := sim.GroundTruth[i]
+				est := sol.X.AtVec(i)
+				diff := est - gt
+				ident := style.ColorIdent(q.IsIdentifiable(i))
+				fmt.Printf("%-6d %-10s %-10s %-+10.3f %-8s\n", i, style.ColorDelay(gt), style.ColorDelay(est), diff, ident)
 			}
 
 			if identCount > 0 {
-				rmse := math.Sqrt(sumSqErr / float64(identCount))
-				mae := sumAbsErr / float64(identCount)
 				fmt.Printf("\nRMSE (identifiable): %.4f ms\n", rmse)
 				fmt.Printf("MAE  (identifiable): %.4f ms\n", mae)
 			}
@@ -122,6 +163,7 @@ the known ground truth.`,
 	cmd.Flags().IntVar(&samplesPerPath, "samples", 3, "RTT samples per path (uses minimum)")
 	cmd.Flags().Int64Var(&seed, "seed", 42, "Random seed (0 = random)")
 	cmd.Flags().Float64Var(&pathFraction, "path-fraction", 1.0, "Fraction of all-pairs paths to use")
+	cmd.Flags().IntVar(&top, "top", 0, "Show only the N worst links (0 = show all)")
 	_ = cmd.MarkFlagRequired("topology")
 
 	return cmd
