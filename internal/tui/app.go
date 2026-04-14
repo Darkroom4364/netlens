@@ -3,14 +3,20 @@
 package tui
 
 import (
+	"fmt"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/Darkroom4364/netlens/tomo"
-	"github.com/Darkroom4364/netlens/internal/tui/panels"
-	"github.com/Darkroom4364/netlens/internal/tui/styles"
+)
+
+type viewMode int
+
+const (
+	viewTree viewMode = iota
+	viewHeatmap
 )
 
 // tickMsg is sent on each refresh interval to trigger a re-solve.
@@ -20,22 +26,34 @@ type tickMsg time.Time
 type Model struct {
 	problem      *tomo.Problem
 	solution     *tomo.Solution
-	selectedLink int
 	width        int
 	height       int
+	mode         viewMode
+	selectedNode int
+	selectedLink int
+	expanded     map[int]bool
 	solver       tomo.Solver
 	refreshRate  time.Duration
 }
 
 // New creates a new TUI model.
 func New(p *tomo.Problem, s *tomo.Solution) Model {
-	return Model{problem: p, solution: s}
+	return Model{
+		problem:  p,
+		solution: s,
+		expanded: make(map[int]bool),
+	}
 }
 
 // NewWithRefresh creates a TUI model that re-solves on a timer.
-// If solver is nil, behaves identically to New.
 func NewWithRefresh(p *tomo.Problem, s *tomo.Solution, solver tomo.Solver, rate time.Duration) Model {
-	return Model{problem: p, solution: s, solver: solver, refreshRate: rate}
+	return Model{
+		problem:     p,
+		solution:    s,
+		solver:      solver,
+		refreshRate: rate,
+		expanded:    make(map[int]bool),
+	}
 }
 
 func (m Model) Init() tea.Cmd {
@@ -51,14 +69,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
-		case "up", "k":
-			if m.selectedLink > 0 {
-				m.selectedLink--
-			}
-		case "down", "j":
+		case "j", "down":
 			if m.selectedLink < m.problem.NumLinks()-1 {
 				m.selectedLink++
 			}
+		case "k", "up":
+			if m.selectedLink > 0 {
+				m.selectedLink--
+			}
+		case "enter":
+			m.expanded[m.selectedLink] = !m.expanded[m.selectedLink]
+		case "h":
+			m.mode = viewHeatmap
+		case "t":
+			m.mode = viewTree
 		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -79,19 +103,59 @@ func (m Model) View() string {
 		return "loading..."
 	}
 
-	leftW := m.width/2 - 2
-	rightW := m.width - leftW - 4
-	bodyH := m.height - 2
+	// Reserve space: 1 for status bar, 3 for detail bar, 1 padding.
+	statusH := 1
+	detailH := 3
+	mainH := m.height - statusH - detailH - 1
+	if mainH < 1 {
+		mainH = 1
+	}
 
-	left := styles.Panel.Width(leftW).Height(bodyH).Render(
-		panels.RenderTopology(m.problem, m.solution, m.selectedLink, leftW, bodyH),
-	)
-	right := styles.Panel.Width(rightW).Height(bodyH).Render(
-		panels.RenderResults(m.problem, m.solution, m.selectedLink, rightW, bodyH),
-	)
+	// Main panel.
+	var main string
+	switch m.mode {
+	case viewHeatmap:
+		main = renderHeatmap(m.problem, m.solution, m.selectedLink, m.width, mainH)
+	default:
+		main = renderTreeView(m.problem, m.solution, m.selectedLink, m.expanded, m.width, mainH)
+	}
+	main = lipgloss.NewStyle().Width(m.width).Height(mainH).Render(main)
 
-	body := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
-	status := panels.RenderStatusbar(m.problem, m.solution, m.width)
+	// Detail bar.
+	detail := renderDetailBar(m.problem, m.solution, m.selectedLink, m.width)
+	detail = lipgloss.NewStyle().Width(m.width).Render(detail)
 
-	return lipgloss.JoinVertical(lipgloss.Left, body, status)
+	// Status bar.
+	solverName := ""
+	if m.solver != nil {
+		solverName = m.solver.Name()
+	}
+	status := renderStatusBar(m.problem, m.solution, m.mode, solverName, m.width)
+	status = lipgloss.NewStyle().Width(m.width).Render(status)
+
+	return lipgloss.JoinVertical(lipgloss.Left, main, detail, status)
+}
+
+// ---------------------------------------------------------------------------
+// Placeholder render functions — Wave 2 will replace these with real panels.
+// ---------------------------------------------------------------------------
+
+func renderTreeView(_ *tomo.Problem, _ *tomo.Solution, _ int, _ map[int]bool, w, h int) string {
+	return fmt.Sprintf("Tree View (%dx%d)", w, h)
+}
+
+func renderHeatmap(_ *tomo.Problem, _ *tomo.Solution, _ int, w, h int) string {
+	return fmt.Sprintf("Heatmap (%dx%d)", w, h)
+}
+
+func renderDetailBar(_ *tomo.Problem, _ *tomo.Solution, _ int, w int) string {
+	return fmt.Sprintf("Detail Bar (w=%d)", w)
+}
+
+func renderStatusBar(_ *tomo.Problem, _ *tomo.Solution, mode viewMode, solver string, w int) string {
+	label := "tree"
+	if mode == viewHeatmap {
+		label = "heatmap"
+	}
+	return fmt.Sprintf("Status | mode=%s solver=%s (w=%d)", label, solver, w)
 }
