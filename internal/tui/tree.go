@@ -117,16 +117,48 @@ func RenderTreeView(p *tomo.Problem, s *tomo.Solution, selected int, expanded ma
 		identPct = p.Quality.IdentifiableFrac * 100
 	}
 	summary := fmt.Sprintf(" %d links | %d congested | %.0f%% identifiable", p.NumLinks(), congested, identPct)
+	// Precompute destination labels and global max width for bar alignment.
+	type linkLabel struct {
+		idx  int
+		name string
+	}
+	groupLabels := make(map[int][]linkLabel)
+	globalMaxLabelW := 0
+	for _, nid := range order {
+		g := seen[nid]
+		labels := make([]linkLabel, len(g.links))
+		for i, li := range g.links {
+			l := p.Links[li]
+			name := fmt.Sprintf("%d", l.Dst)
+			if lbl := nodeLabel(p, l.Dst); lbl != fmt.Sprintf("node %d", l.Dst) {
+				name = fmt.Sprintf("%d (%s)", l.Dst, lbl)
+			}
+			labels[i] = linkLabel{li, name}
+			if len(name) > globalMaxLabelW {
+				globalMaxLabelW = len(name)
+			}
+		}
+		groupLabels[nid] = labels
+	}
+	// prefix "   → " = 5 chars, then padded label, then "  " gap, then bar, then " " + metrics (~30 chars)
+	barW := w - 5 - globalMaxLabelW - 2 - 30
+	if barW < 5 {
+		barW = 5
+	}
+
 	rows := []string{styles.Title.Render(summary)}
 	flatIdx := 1 // row 0 is the summary row already added above
 	for _, nid := range order {
 		g := seen[nid]
-		label := nodeLabel(p, nid)
+		label := fmt.Sprintf("%d", nid)
+		if lbl := nodeLabel(p, nid); lbl != fmt.Sprintf("node %d", nid) {
+			label = fmt.Sprintf("%d (%s)", nid, lbl)
+		}
 		arrow := "▶"
 		if expanded[nid] {
 			arrow = "▼"
 		}
-		header := fmt.Sprintf(" %s %s (%d links)", arrow, label, len(g.links))
+		header := fmt.Sprintf(" %s %s — %d links", arrow, label, len(g.links))
 		if flatIdx == selected {
 			header = styles.Selected.Render(header)
 		}
@@ -135,12 +167,8 @@ func RenderTreeView(p *tomo.Problem, s *tomo.Solution, selected int, expanded ma
 		if !expanded[nid] {
 			continue
 		}
-		barW := w - 40
-		if barW < 5 {
-			barW = 5
-		}
-		for _, li := range g.links {
-			l := p.Links[li]
+		for _, ll := range groupLabels[nid] {
+			li := ll.idx
 			delay := s.X.AtVec(li)
 			filled := int(delay / 50.0 * float64(barW))
 			if filled > barW {
@@ -166,7 +194,8 @@ func RenderTreeView(p *tomo.Problem, s *tomo.Solution, selected int, expanded ma
 			if p.Quality != nil && li < len(p.Quality.CoveragePerLink) {
 				cov = fmt.Sprintf(" cov:%d", p.Quality.CoveragePerLink[li])
 			}
-			row := fmt.Sprintf("   →%d  %s %s%s%s", l.Dst, bar, delayStr, conf, cov)
+			paddedName := fmt.Sprintf("%-*s", globalMaxLabelW, ll.name)
+			row := fmt.Sprintf("   → %s  %s %s%s%s", paddedName, bar, delayStr, conf, cov)
 			if flatIdx == selected {
 				row = styles.Selected.Render(row)
 			}
