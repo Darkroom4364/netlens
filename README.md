@@ -1,11 +1,5 @@
 <p align="center">
-  <code>
-  ┌─────────────────────────────┐
-  │   ╔╗╔╔═╗╔╦╗╦  ╔═╗╔╗╔╔═╗    │
-  │   ║║║║╣  ║ ║  ║╣ ║║║╚═╗    │
-  │   ╝╚╝╚═╝ ╩ ╩═╝╚═╝╝╚╝╚═╝    │
-  └─────────────────────────────┘
-  </code>
+  <img src="assets/netlens-logo.svg" alt="netlens" width="150" height="150" />
 </p>
 
 <h1 align="center">netlens</h1>
