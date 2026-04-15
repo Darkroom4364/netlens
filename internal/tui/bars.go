@@ -68,7 +68,9 @@ func RenderDetailBar(p *tomo.Problem, s *tomo.Solution, linkIdx int, w int) stri
 		} else {
 			ident = "no"
 		}
-		paths = p.Quality.CoveragePerLink[linkIdx]
+		if linkIdx < len(p.Quality.CoveragePerLink) {
+			paths = p.Quality.CoveragePerLink[linkIdx]
+		}
 	}
 
 	line := fmt.Sprintf("%s  %.2fms ±%.2f  σ=%.1f  paths=%d  ident=%s", name, delay, conf, sigma, paths, ident)
@@ -79,7 +81,7 @@ func RenderDetailBar(p *tomo.Problem, s *tomo.Solution, linkIdx int, w int) stri
 }
 
 // RenderStatusBar renders the bottom status line.
-func RenderStatusBar(p *tomo.Problem, s *tomo.Solution, mode viewMode, solver string, w int) string {
+func RenderStatusBar(p *tomo.Problem, s *tomo.Solution, mode viewMode, solver string, filtering bool, sortMode int, w int) string {
 	hint := "[h]heatmap"
 	if mode == viewHeatmap {
 		hint = "[t]tree"
@@ -88,7 +90,15 @@ func RenderStatusBar(p *tomo.Problem, s *tomo.Solution, mode viewMode, solver st
 	if p.Quality != nil {
 		identPct = p.Quality.IdentifiableFrac * 100
 	}
-	left := fmt.Sprintf(" %s [q]quit  solver=%s", hint, solver)
+	sortNames := []string{"default", "delay↓", "delay↑", "name", "coverage"}
+	sortLabel := sortNames[0]
+	if sortMode >= 0 && sortMode < len(sortNames) {
+		sortLabel = sortNames[sortMode]
+	}
+	left := fmt.Sprintf(" %s [/]filter [s]sort:%s [m]solver [?]help [q]quit  solver=%s", hint, sortLabel, solver)
+	if filtering {
+		left = fmt.Sprintf(" FILTER: type to search, Enter to apply, Esc to cancel  solver=%s", solver)
+	}
 	rank := 0
 	if p.Quality != nil {
 		rank = p.Quality.Rank

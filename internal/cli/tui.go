@@ -42,7 +42,25 @@ func newTUICmd() *cobra.Command {
 				return fmt.Errorf("solve: %w", err)
 			}
 
-			model := tui.New(sim.Problem, sol)
+			allSolvers := []tomo.Solver{
+				&tomo.TikhonovSolver{},
+				&tomo.TSVDSolver{},
+				&tomo.NNLSSolver{},
+				&tomo.ADMMSolver{},
+				&tomo.IRL1Solver{},
+				&tomo.VardiEMSolver{},
+				&tomo.TomogravitySolver{},
+				&tomo.LaplacianSolver{},
+			}
+			idx := 0
+			for i, s := range allSolvers {
+				if s.Name() == solver.Name() {
+					idx = i
+					break
+				}
+			}
+
+			model := tui.New(sim.Problem, sol, allSolvers, idx)
 			p := tea.NewProgram(model, tea.WithAltScreen())
 			_, err = p.Run()
 			return err
