@@ -111,14 +111,13 @@ func TestCLI_SimulateNonexistentTopology(t *testing.T) {
 	}
 }
 
-func TestCLI_SimulateUnknownSolverFallsToDefault(t *testing.T) {
-	out, err := executeCommand("simulate", "-t", "../../testdata/topologies/abilene.graphml", "-m", "unknown_solver")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+func TestCLI_SimulateUnknownSolverReturnsError(t *testing.T) {
+	_, err := executeCommand("simulate", "-t", "../../testdata/topologies/abilene.graphml", "-m", "unknown_solver")
+	if err == nil {
+		t.Fatal("expected error for unknown solver method, got nil")
 	}
-	// The default solver is tikhonov
-	if !strings.Contains(out, "Solver:") {
-		t.Fatalf("expected output to contain 'Solver:', got:\n%s", out)
+	if !strings.Contains(err.Error(), "unknown solver method") {
+		t.Fatalf("expected 'unknown solver method' error, got: %v", err)
 	}
 }
 
@@ -272,5 +271,80 @@ func TestCLI_CompletionInvalidShell(t *testing.T) {
 	_, err := executeCommand("completion", "invalid_shell")
 	if err == nil {
 		t.Fatal("expected error for invalid shell, got nil")
+	}
+}
+
+// --- Missing solver coverage ---
+
+func TestCLI_SimulateTSVD(t *testing.T) {
+	_, err := executeCommand("simulate", "-t", "../../testdata/topologies/abilene.graphml", "-m", "tsvd")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestCLI_SimulateIRL1(t *testing.T) {
+	_, err := executeCommand("simulate", "-t", "../../testdata/topologies/abilene.graphml", "-m", "irl1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestCLI_SimulateLaplacian(t *testing.T) {
+	_, err := executeCommand("simulate", "-t", "../../testdata/topologies/abilene.graphml", "-m", "laplacian")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// --- Flag combination tests ---
+
+func TestCLI_SimulateNoColor(t *testing.T) {
+	// Baseline: default run may or may not have ANSI (pipe detection can
+	// suppress it), so this test only verifies --no-color doesn't crash
+	// and produces clean output.
+	out, err := executeCommand("simulate", "-t", "../../testdata/topologies/abilene.graphml", "--no-color")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(out, "\033") {
+		t.Error("expected no ANSI escape sequences with --no-color")
+	}
+}
+
+func TestCLI_SimulateQuiet(t *testing.T) {
+	out, err := executeCommand("simulate", "-t", "../../testdata/topologies/abilene.graphml", "--quiet")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(out, "Topology:") {
+		t.Error("expected verbose preamble to be suppressed with --quiet")
+	}
+}
+
+func TestCLI_SimulateNoColorQuiet(t *testing.T) {
+	out, err := executeCommand("simulate", "-t", "../../testdata/topologies/abilene.graphml", "--no-color", "--quiet")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(out, "\033") {
+		t.Error("expected no ANSI with --no-color --quiet")
+	}
+	if strings.Contains(out, "Topology:") {
+		t.Error("expected verbose preamble suppressed with --quiet")
+	}
+}
+
+// --- TUI subcommand ---
+
+func TestCLI_TUISubcommandDetection(t *testing.T) {
+	out, _ := executeCommand("--help")
+	if !strings.Contains(out, "tui") {
+		t.Skip("tui subcommand not available (build without -tags tui)")
+	}
+	// Verify it requires -t flag
+	_, err := executeCommand("tui")
+	if err == nil {
+		t.Error("expected error when tui is called without -t flag")
 	}
 }

@@ -7,8 +7,8 @@ netlens tui -t <topology.graphml> [-m <solver>]
 ```
 
 `-t` (required) path to a Topology Zoo GraphML file. `-m` selects the solver
-method (default `tikhonov`; options: `tsvd`, `tikhonov`, `nnls`, `admm`,
-`vardi`). The command simulates measurements, solves, and opens an interactive
+method (default `tikhonov`; options: `tsvd`, `tikhonov`, `nnls`, `admm`, `irl1`,
+`vardi`, `tomogravity`, `laplacian`). The command simulates measurements, solves, and opens an interactive
 full-screen terminal UI.
 
 ## Layout
@@ -17,38 +17,46 @@ The screen is split into three regions:
 
 | Region | Panel | Content |
 |--------|-------|---------|
-| Left half | **Topology -- Links** | Scrollable list of all links with index, src->dst, and inferred delay (ms). Each row is color-coded by health. |
-| Right half | **Link Detail** | Detail for the currently selected link: delay, confidence interval, identifiability status, path coverage count, and the list of measurement paths traversing the link. |
-| Bottom | **Status Bar** | Solver method, solve duration, routing-matrix rank vs. link count, identifiable fraction, and a keybinding reminder. |
+| Main | **Tree / Heatmap** | Tree view: links grouped by source node with expand/collapse, bar charts, and color-coded delays. Heatmap view: matrix of per-link delays between node pairs. Toggle with `h`/`t`. |
+| Bottom | **Detail Bar** | Detail for the currently selected link: delay, confidence interval, σ deviation, path coverage, identifiability status. |
+| Footer | **Status Bar** | Keybinding hints, current sort/filter mode, solver name, routing-matrix rank, identifiable fraction. |
 
 ## Keybindings
 
 | Key | Action |
 |-----|--------|
-| `j` / `Down` | Select next link |
-| `k` / `Up` | Select previous link |
-| `q` / `Ctrl+C` | Quit |
+| `j` / `↓` | Navigate down |
+| `k` / `↑` | Navigate up |
+| `Enter` | Expand/collapse node |
+| `h` | Heatmap view |
+| `t` | Tree view |
+| `/` | Filter by node name |
+| `s` | Cycle sort mode |
+| `m` | Cycle solver and re-solve |
+| `?` | Help overlay |
+| `q` | Quit |
 
 ## Color Coding
 
 Link health in the topology list and heatmap bars uses three thresholds:
 
+### Tree View
+
 | Color | Condition |
 |-------|-----------|
 | Green | delay < 5 ms |
-| Yellow | 5 ms <= delay < 20 ms |
-| Red | delay >= 20 ms |
-| Dim (faint) | Link is not identifiable |
+| Yellow | 5 ms ≤ delay ≤ 20 ms |
+| Red | delay > 20 ms |
 
-The selected link row is rendered bold + reverse video.
+### Heatmap View
 
-## Heatmap Panel
+| Color | Condition |
+|-------|-----------|
+| Green | delay < 2 ms |
+| Yellow | 2 ms ≤ delay ≤ 10 ms |
+| Red | delay > 10 ms |
 
-`RenderHeatmap` produces a bar-chart view of all links sorted worst-first.
-Each row shows `src->dst`, a filled block bar scaled to the maximum
-identifiable delay, and the numeric delay. Bars use the same green/yellow/red
-thresholds; unidentifiable links are dimmed. The heatmap is available for
-programmatic embedding but is not wired into the default two-panel TUI layout.
+The selected link row is highlighted in the tree view.
 
 ## Auto-Refresh
 
@@ -57,12 +65,12 @@ timer. Each tick calls `solver.Solve(problem)` and replaces the current
 solution, so the display updates live as underlying measurements change.
 
 ```go
-model := tui.NewWithRefresh(problem, initialSolution, solver, 5*time.Second)
+model := tui.NewWithRefresh(problem, initialSolution, solvers, solverIdx, 5*time.Second)
 p := tea.NewProgram(model, tea.WithAltScreen())
 p.Run()
 ```
 
-If `solver` is nil, `NewWithRefresh` behaves identically to `New` (no
+If `solvers` is nil, `NewWithRefresh` behaves identically to `New` (no
 auto-refresh). The refresh rate is the `time.Duration` passed as the last
 argument.
 
@@ -72,10 +80,10 @@ Both constructors return a `tui.Model` that satisfies `bubbletea.Model`:
 
 ```go
 // One-shot display of a pre-computed solution.
-tui.New(problem, solution)
+tui.New(problem, solution, solvers, solverIdx)
 
 // Live-updating display that re-solves every interval.
-tui.NewWithRefresh(problem, solution, solver, rate)
+tui.NewWithRefresh(problem, solution, solvers, solverIdx, rate)
 ```
 
 Pass the model to `tea.NewProgram` with `tea.WithAltScreen()` for full-screen

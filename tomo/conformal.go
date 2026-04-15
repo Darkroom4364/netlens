@@ -103,19 +103,22 @@ func Conformal(p *Problem, solver Solver, cfg ConformalConfig) (*Solution, error
 	}
 	q := residuals[qIdx]
 
-	// Step 6: per-link confidence via calibration coverage.
-	coverage := make([]float64, n)
+	// Step 6: per-link confidence from conformal quantile.
+	// q bounds path-level residuals; use it directly for each covered link.
+	covered := make([]bool, n)
 	for _, idx := range calIdx {
 		for j := 0; j < n; j++ {
-			coverage[j] += p.A.At(idx, j)
+			if p.A.At(idx, j) != 0 {
+				covered[j] = true
+			}
 		}
 	}
 	confidence := make([]float64, n)
 	for j := 0; j < n; j++ {
-		if coverage[j] == 0 {
+		if !covered[j] {
 			confidence[j] = math.Inf(1)
 		} else {
-			confidence[j] = q / coverage[j]
+			confidence[j] = q
 		}
 	}
 

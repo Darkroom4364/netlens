@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"sort"
 	"strconv"
 	"time"
 
 	"github.com/Darkroom4364/netlens/internal/format"
 	"github.com/Darkroom4364/netlens/internal/measure"
+	"github.com/Darkroom4364/netlens/internal/style"
 	"github.com/Darkroom4364/netlens/tomo"
 	"github.com/Darkroom4364/netlens/topology"
 	"github.com/spf13/cobra"
@@ -27,6 +29,7 @@ func newScanCmd() *cobra.Command {
 		stop         int64
 		maxAnonymous float64
 		useCache     bool
+		top          int
 	)
 
 	cmd := &cobra.Command{
@@ -35,7 +38,14 @@ func newScanCmd() *cobra.Command {
 		Long: `Fetches traceroute measurements from RIPE Atlas or a local file,
 infers the network topology, builds the routing matrix, runs identifiability
 analysis, solves the inverse problem, and outputs per-link estimates.`,
+		Example: `  netlens scan --source ripe --msm 1001 --cache
+  netlens scan --source traceroute --file traces.json -m tikhonov --top 20
+  netlens scan --source ripe --msm 1001 -f json > results.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if maxAnonymous < 0 || maxAnonymous > 1 {
+				return fmt.Errorf("--max-anonymous must be in [0, 1] (got %.4f)", maxAnonymous)
+			}
+
 			// 1. Load measurements
 			var measurements []tomo.PathMeasurement
 			var err error
@@ -102,7 +112,10 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 			if len(measurements) == 0 {
 				return fmt.Errorf("no measurements loaded")
 			}
-			fmt.Printf("Loaded %d measurements from %s\n", len(measurements), source)
+			quiet, _ := cmd.Flags().GetBool("quiet")
+			if !quiet {
+				fmt.Printf("Loaded %d measurements from %s\n", len(measurements), source)
+			}
 
 			// 2. Infer topology from traceroute hops
 			opts := topology.InferOpts{
@@ -120,8 +133,10 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 				accepted[i] = measurements[idx]
 			}
 
-			fmt.Printf("Topology:       %d nodes, %d links\n", graph.NumNodes(), graph.NumLinks())
-			fmt.Printf("Paths:          %d (of %d measurements)\n", len(pathSpecs), len(measurements))
+			if !quiet {
+				fmt.Printf("Topology:       %d nodes, %d links\n", graph.NumNodes(), graph.NumLinks())
+				fmt.Printf("Paths:          %d (of %d measurements)\n", len(pathSpecs), len(measurements))
+			}
 
 			// 3. Build routing matrix + Problem
 			problem, err := tomo.BuildProblemFromMeasurements(graph, accepted, pathSpecs)
@@ -131,12 +146,17 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 
 			// 4. Identifiability analysis (already computed in BuildProblem)
 			q := problem.Quality
-			fmt.Printf("Matrix rank:    %d / %d (identifiable: %.0f%%)\n",
-				q.Rank, q.NumLinks, q.IdentifiableFrac*100)
-			fmt.Printf("Condition:      %.2f\n", q.ConditionNumber)
+			if !quiet {
+				fmt.Printf("Matrix rank:    %d / %d (identifiable: %.0f%%)\n",
+					q.Rank, q.NumLinks, q.IdentifiableFrac*100)
+				fmt.Printf("Condition:      %.2f\n", q.ConditionNumber)
+			}
 
 			// 5. Solve with selected method
-			solver := getSolver(method)
+			solver, err := getSolver(method)
+			if err != nil {
+				return err
+			}
 			sol, err := solver.Solve(problem)
 			if err != nil {
 				return fmt.Errorf("solve: %w", err)
@@ -151,17 +171,23 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 					}
 				}
 				if negCount > 0 {
-					_, _ = fmt.Fprintf(os.Stderr, "Warning: %d links have negative delay estimates (physically impossible). Consider using --method nnls to enforce non-negativity.\n", negCount)
+					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: %d links have negative delay estimates (physically impossible). Consider using --method nnls to enforce non-negativity.\n", negCount)
 				}
 			}
 
-			fmt.Printf("Solver:         %s\n", sol.Method)
-			fmt.Printf("Duration:       %v\n", sol.Duration)
-			fmt.Printf("Residual:       %.6f\n\n", sol.Residual)
+			if !quiet {
+				fmt.Printf("Solver:         %s\n", sol.Method)
+				fmt.Printf("Duration:       %v\n", sol.Duration)
+				fmt.Printf("Residual:       %.6f\n\n", sol.Residual)
+			}
 
 			// 6. Output results
+			if !style.IsTTY && outputFormat == "table" {
+				outputFormat = "json"
+			}
+
 			if outputFormat == "table" {
-				printScanTable(problem, sol)
+				printScanTable(problem, sol, top, quiet)
 				return nil
 			}
 
@@ -185,6 +211,7 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 	cmd.Flags().Int64Var(&stop, "stop", now, "UNIX timestamp for RIPE Atlas result window stop")
 	cmd.Flags().Float64Var(&maxAnonymous, "max-anonymous", 0.3, "Max anonymous hop fraction before discarding path")
 	cmd.Flags().BoolVar(&useCache, "cache", false, "Cache RIPE Atlas results locally (~/.cache/netlens/)")
+	cmd.Flags().IntVar(&top, "top", 0, "Show only the N worst links (0 = show all)")
 
 	_ = cmd.MarkFlagRequired("source")
 
@@ -192,40 +219,70 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 }
 
 // printScanTable prints a human-readable per-link summary table.
-func printScanTable(p *tomo.Problem, sol *tomo.Solution) {
+func printScanTable(p *tomo.Problem, sol *tomo.Solution, top int, quiet bool) {
 	q := p.Quality
 
-	fmt.Printf("%-6s %-20s %-10s %-10s %-8s\n", "Link", "Endpoints", "Est(ms)", "Coverage", "Ident")
-	fmt.Println("--------------------------------------------------------------")
+	// Summary line
+	congested := 0
+	for i := range p.Links {
+		if q.IsIdentifiable(i) && sol.X.AtVec(i) > 20 {
+			congested++
+		}
+	}
+	fmt.Printf("\n%s  %s  %s  %s\n\n",
+		style.Bold(fmt.Sprintf("%d links", len(p.Links))),
+		style.Yellow(fmt.Sprintf("%d congested", congested)),
+		"RMSE —",
+		fmt.Sprintf("%.0f%% identifiable", q.IdentifiableFrac*100))
+
+	// Build sorted index (descending by estimated delay)
+	idx := make([]int, len(p.Links))
+	for i := range idx {
+		idx[i] = i
+	}
+	sort.Slice(idx, func(a, b int) bool {
+		return sol.X.AtVec(idx[a]) > sol.X.AtVec(idx[b])
+	})
+	if top > 0 && top < len(idx) {
+		idx = idx[:top]
+	}
+
+	if !quiet {
+		fmt.Printf("%s %s %s %s %s\n",
+			style.Bold(fmt.Sprintf("%-6s", "Link")),
+			style.Bold(fmt.Sprintf("%-20s", "Endpoints")),
+			style.Bold(fmt.Sprintf("%-10s", "Est(ms)")),
+			style.Bold(fmt.Sprintf("%-10s", "Coverage")),
+			style.Bold(fmt.Sprintf("%-8s", "Ident")))
+		fmt.Println("--------------------------------------------------------------")
+	}
 
 	var identCount int
 	var sumEst float64
-	for i, link := range p.Links {
+	for _, i := range idx {
+		link := p.Links[i]
 		est := sol.X.AtVec(i)
 		coverage := q.CoveragePerLink[i]
-		ident := "yes"
-		if !q.IsIdentifiable(i) {
-			ident = "NO"
-		} else {
+		identifiable := q.IsIdentifiable(i)
+		if identifiable {
 			identCount++
 			sumEst += est
 		}
 		label := fmt.Sprintf("%d->%d", link.Src, link.Dst)
-		fmt.Printf("%-6d %-20s %-10.3f %-10d %-8s\n", i, label, est, coverage, ident)
+		fmt.Printf("%-6d %-20s %s %-10d %s\n", i, label, style.PadRight(style.ColorDelay(est), 10), coverage, style.PadRight(style.ColorIdent(identifiable), 8))
 	}
 
 	if identCount > 0 {
 		mean := sumEst / float64(identCount)
-		// Compute stddev of identifiable link estimates
 		var sumSqDiff float64
-		for i := range p.Links {
+		for _, i := range idx {
 			if q.IsIdentifiable(i) {
 				diff := sol.X.AtVec(i) - mean
 				sumSqDiff += diff * diff
 			}
 		}
 		stddev := math.Sqrt(sumSqDiff / float64(identCount))
-		fmt.Printf("\nIdentifiable links: %d / %d\n", identCount, len(p.Links))
+		fmt.Printf("\nIdentifiable links: %d / %d\n", identCount, len(idx))
 		fmt.Printf("Mean estimate:      %.4f ms\n", mean)
 		fmt.Printf("Std dev:            %.4f ms\n", stddev)
 	}

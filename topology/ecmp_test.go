@@ -68,32 +68,41 @@ func TestECMP_ThreeDistinctPaths(t *testing.T) {
 }
 
 func TestECMP_DeduplicateKeepsFewestAnonymous(t *testing.T) {
+	// Both measurements have anonymous hops so dedup must actually compare counts.
 	ms := []tomo.PathMeasurement{
 		{Src: "A", Dst: "B", Hops: []tomo.Hop{{IP: "10.0.0.1"}, {Anonymous: true}, {Anonymous: true}}},
-		{Src: "A", Dst: "B", Hops: []tomo.Hop{{IP: "10.0.0.1"}, {IP: "10.0.0.2"}}},
+		{Src: "A", Dst: "B", Hops: []tomo.Hop{{IP: "10.0.0.2"}, {Anonymous: true}}},
 	}
 	deduped := DeduplicateECMP(ms)
 	if len(deduped) != 1 {
 		t.Fatalf("expected 1 deduplicated measurement, got %d", len(deduped))
 	}
 	anon := countAnonymous(deduped[0])
-	if anon != 0 {
-		t.Fatalf("expected 0 anonymous hops in winner, got %d", anon)
+	if anon != 1 {
+		t.Fatalf("expected 1 anonymous hop in winner, got %d", anon)
+	}
+	if deduped[0].Hops[0].IP != "10.0.0.2" {
+		t.Fatalf("expected measurement with fewer anonymous hops to win, got IP %s", deduped[0].Hops[0].IP)
 	}
 }
 
 func TestECMP_DeduplicateTiePicksFirst(t *testing.T) {
+	// Both measurements have exactly 1 anonymous hop each — a true tie.
+	// The first measurement should win because the comparator uses < (not <=).
 	ms := []tomo.PathMeasurement{
-		{Src: "A", Dst: "B", Hops: []tomo.Hop{{IP: "10.0.0.1"}, {Anonymous: true}}},
-		{Src: "A", Dst: "B", Hops: []tomo.Hop{{IP: "10.0.1.1"}, {Anonymous: true}}},
+		{Src: "A", Dst: "B", Hops: []tomo.Hop{{IP: "10.0.0.1"}, {Anonymous: true}, {IP: "10.0.0.2"}}},
+		{Src: "A", Dst: "B", Hops: []tomo.Hop{{IP: "10.0.0.1"}, {IP: "10.0.0.3"}, {Anonymous: true}}},
 	}
 	deduped := DeduplicateECMP(ms)
 	if len(deduped) != 1 {
 		t.Fatalf("expected 1 deduplicated measurement, got %d", len(deduped))
 	}
-	// First measurement should win due to < not <=.
-	if deduped[0].Hops[0].IP != "10.0.0.1" {
-		t.Fatalf("expected first measurement to win tie, got IP %s", deduped[0].Hops[0].IP)
+	// Both have 1 anonymous hop; first should win the tie.
+	if deduped[0].Hops[1].Anonymous != true {
+		t.Fatalf("expected first measurement (anonymous at index 1) to win tie")
+	}
+	if deduped[0].Hops[2].IP != "10.0.0.2" {
+		t.Fatalf("expected first measurement to win tie, got hop[2] IP %s", deduped[0].Hops[2].IP)
 	}
 }
 
