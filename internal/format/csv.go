@@ -13,7 +13,6 @@ type CSVFormatter struct{}
 
 func (f *CSVFormatter) Format(w io.Writer, p *tomo.Problem, s *tomo.Solution) error {
 	cw := csv.NewWriter(w)
-	defer cw.Flush()
 
 	if err := cw.Write([]string{"link_id", "src", "dst", "delay_ms", "confidence_ms", "identifiable"}); err != nil {
 		return err
@@ -46,5 +45,6 @@ func (f *CSVFormatter) Format(w io.Writer, p *tomo.Problem, s *tomo.Solution) er
 		}
 	}
 
+	cw.Flush()
 	return cw.Error()
 }

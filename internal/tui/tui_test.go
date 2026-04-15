@@ -272,7 +272,7 @@ func TestRenderDetailBar_CongestedLink(t *testing.T) {
 
 func TestRenderStatusBar_TreeMode(t *testing.T) {
 	p, s := testFixture(t)
-	out := RenderStatusBar(p, s, viewTree, "tikhonov", false, "", 0, 120)
+	out := RenderStatusBar(p, s, viewTree, "tikhonov", false, "", 0, "", 120)
 	if !strings.Contains(out, "[h]heatmap") {
 		t.Error("expected '[h]heatmap' hint in tree mode")
 	}
@@ -280,7 +280,7 @@ func TestRenderStatusBar_TreeMode(t *testing.T) {
 
 func TestRenderStatusBar_HeatmapMode(t *testing.T) {
 	p, s := testFixture(t)
-	out := RenderStatusBar(p, s, viewHeatmap, "tikhonov", false, "", 0, 120)
+	out := RenderStatusBar(p, s, viewHeatmap, "tikhonov", false, "", 0, "", 120)
 	if !strings.Contains(out, "[t]tree") {
 		t.Error("expected '[t]tree' hint in heatmap mode")
 	}
@@ -288,7 +288,7 @@ func TestRenderStatusBar_HeatmapMode(t *testing.T) {
 
 func TestRenderStatusBar_FilterActive(t *testing.T) {
 	p, s := testFixture(t)
-	out := RenderStatusBar(p, s, viewTree, "tikhonov", true, "test", 0, 120)
+	out := RenderStatusBar(p, s, viewTree, "tikhonov", true, "test", 0, "", 120)
 	if !strings.Contains(out, "FILTER:") {
 		t.Error("expected 'FILTER:' when filtering is active")
 	}
@@ -301,7 +301,7 @@ func TestRenderStatusBar_SortModes(t *testing.T) {
 	p, s := testFixture(t)
 	labels := []string{"default", "delay↓", "delay↑", "name", "coverage"}
 	for i, label := range labels {
-		out := RenderStatusBar(p, s, viewTree, "test", false, "", i, 120)
+		out := RenderStatusBar(p, s, viewTree, "test", false, "", i, "", 120)
 		if !strings.Contains(out, label) {
 			t.Errorf("sort mode %d: expected %q in output", i, label)
 		}

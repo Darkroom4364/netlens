@@ -22,7 +22,10 @@ const (
 type tickMsg time.Time
 
 // solveResultMsg carries the result of an async solve.
-type solveResultMsg struct{ sol *tomo.Solution }
+type solveResultMsg struct {
+	sol *tomo.Solution
+	err error
+}
 
 // Model is the top-level Bubble Tea model for the netlens TUI.
 type Model struct {
@@ -40,6 +43,7 @@ type Model struct {
 	filtering   bool
 	filterText  string
 	sortMode    int
+	solveErr    string
 }
 
 // New creates a new TUI model with a list of available solvers.
@@ -140,10 +144,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				p := m.problem
 				return m, func() tea.Msg {
 					sol, err := solver.Solve(p)
-					if err != nil {
-						return nil
-					}
-					return solveResultMsg{sol}
+					return solveResultMsg{sol, err}
 				}
 			}
 		case "?":
@@ -155,8 +156,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 	case solveResultMsg:
-		if msg.sol != nil {
+		if msg.err != nil {
+			m.solveErr = msg.err.Error()
+		} else if msg.sol != nil {
 			m.solution = msg.sol
+			m.solveErr = ""
 		}
 	case tickMsg:
 		if solver := m.currentSolver(); solver != nil {
@@ -164,10 +168,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(
 				func() tea.Msg {
 					sol, err := solver.Solve(p)
-					if err != nil {
-						return nil
-					}
-					return solveResultMsg{sol}
+					return solveResultMsg{sol, err}
 				},
 				tea.Tick(m.refreshRate, func(t time.Time) tea.Msg { return tickMsg(t) }),
 			)
@@ -215,7 +216,7 @@ func (m Model) View() string {
 	if solver := m.currentSolver(); solver != nil {
 		solverName = solver.Name()
 	}
-	status := RenderStatusBar(m.problem, m.solution, m.mode, solverName, m.filtering, m.filterText, m.sortMode, m.width)
+	status := RenderStatusBar(m.problem, m.solution, m.mode, solverName, m.filtering, m.filterText, m.sortMode, m.solveErr, m.width)
 	status = lipgloss.NewStyle().Width(m.width).Render(status)
 
 	return lipgloss.JoinVertical(lipgloss.Left, main, detail, status)
