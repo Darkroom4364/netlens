@@ -123,7 +123,5 @@ func RenderHeatmapView(p *tomo.Problem, s *tomo.Solution, selected int, filterTe
 	b.WriteString(redCell.Render(" >10ms ") + " ")
 	b.WriteString("· no link\n")
 
-	return styles.Panel.MaxWidth(w).MaxHeight(h).Render(
-		lipgloss.NewStyle().Render(b.String()),
-	)
+	return styles.Panel.MaxWidth(w).MaxHeight(h).Render(b.String())
 }

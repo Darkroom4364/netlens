@@ -87,9 +87,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "enter":
 				m.filtering = false
+				if max := TreeRowCount(m.problem, m.solution, m.expanded, m.filterText, m.sortMode) - 1; m.cursor > max {
+					m.cursor = max
+				}
 			case "esc":
 				m.filtering = false
 				m.filterText = ""
+				if max := TreeRowCount(m.problem, m.solution, m.expanded, "", m.sortMode) - 1; m.cursor > max {
+					m.cursor = max
+				}
 			case "backspace":
 				if len(m.filterText) > 0 {
 					m.filterText = m.filterText[:len(m.filterText)-1]
@@ -113,7 +119,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor--
 			}
 		case "enter":
-			m.expanded[m.cursor] = !m.expanded[m.cursor]
+			if nid := CursorToNodeID(m.problem, m.solution, m.cursor, m.expanded, m.filterText, m.sortMode); nid >= 0 {
+				m.expanded[nid] = !m.expanded[nid]
+			}
 		case "h":
 			m.mode = viewHeatmap
 		case "t":
@@ -122,6 +130,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.filtering = true
 		case "s":
 			m.sortMode = (m.sortMode + 1) % 5
+			if max := TreeRowCount(m.problem, m.solution, m.expanded, m.filterText, m.sortMode) - 1; m.cursor > max {
+				m.cursor = max
+			}
 		case "m":
 			if len(m.solvers) > 0 {
 				m.solverIdx = (m.solverIdx + 1) % len(m.solvers)
@@ -204,7 +215,7 @@ func (m Model) View() string {
 	if solver := m.currentSolver(); solver != nil {
 		solverName = solver.Name()
 	}
-	status := RenderStatusBar(m.problem, m.solution, m.mode, solverName, m.filtering, m.sortMode, m.width)
+	status := RenderStatusBar(m.problem, m.solution, m.mode, solverName, m.filtering, m.filterText, m.sortMode, m.width)
 	status = lipgloss.NewStyle().Width(m.width).Render(status)
 
 	return lipgloss.JoinVertical(lipgloss.Left, main, detail, status)

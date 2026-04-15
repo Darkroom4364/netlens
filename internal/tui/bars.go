@@ -81,7 +81,7 @@ func RenderDetailBar(p *tomo.Problem, s *tomo.Solution, linkIdx int, w int) stri
 }
 
 // RenderStatusBar renders the bottom status line.
-func RenderStatusBar(p *tomo.Problem, s *tomo.Solution, mode viewMode, solver string, filtering bool, sortMode int, w int) string {
+func RenderStatusBar(p *tomo.Problem, s *tomo.Solution, mode viewMode, solver string, filtering bool, filterText string, sortMode int, w int) string {
 	hint := "[h]heatmap"
 	if mode == viewHeatmap {
 		hint = "[t]tree"
@@ -97,7 +97,7 @@ func RenderStatusBar(p *tomo.Problem, s *tomo.Solution, mode viewMode, solver st
 	}
 	left := fmt.Sprintf(" %s [/]filter [s]sort:%s [m]solver [?]help [q]quit  solver=%s", hint, sortLabel, solver)
 	if filtering {
-		left = fmt.Sprintf(" FILTER: type to search, Enter to apply, Esc to cancel  solver=%s", solver)
+		left = fmt.Sprintf(" FILTER: %s█  (Enter=apply  Esc=cancel)", filterText)
 	}
 	rank := 0
 	if p.Quality != nil {

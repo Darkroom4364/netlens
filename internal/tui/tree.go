@@ -118,7 +118,7 @@ func RenderTreeView(p *tomo.Problem, s *tomo.Solution, selected int, expanded ma
 	}
 	summary := fmt.Sprintf(" %d links | %d congested | %.0f%% identifiable", p.NumLinks(), congested, identPct)
 	rows := []string{styles.Title.Render(summary)}
-	flatIdx := 0
+	flatIdx := 1 // row 0 is the summary row already added above
 	for _, nid := range order {
 		g := seen[nid]
 		label := nodeLabel(p, nid)
@@ -233,6 +233,26 @@ func TreeRowCount(p *tomo.Problem, s *tomo.Solution, expanded map[int]bool, filt
 		}
 	}
 	return count
+}
+
+// CursorToNodeID returns the node ID at the given cursor position if it is a
+// node-header row, and -1 otherwise.
+func CursorToNodeID(p *tomo.Problem, s *tomo.Solution, cursor int, expanded map[int]bool, filterText string, sortMode int) int {
+	if p == nil {
+		return -1
+	}
+	seen, order := computeOrder(p, s, filterText, sortMode)
+	pos := 1 // pos 0 is the summary row
+	for _, nid := range order {
+		if cursor == pos {
+			return nid
+		}
+		pos++
+		if expanded[nid] {
+			pos += len(seen[nid].links)
+		}
+	}
+	return -1
 }
 
 // CursorToLinkIdx maps a flat cursor position (used in the tree view) to a
