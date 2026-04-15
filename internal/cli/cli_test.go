@@ -300,6 +300,9 @@ func TestCLI_SimulateLaplacian(t *testing.T) {
 // --- Flag combination tests ---
 
 func TestCLI_SimulateNoColor(t *testing.T) {
+	// Baseline: default run may or may not have ANSI (pipe detection can
+	// suppress it), so this test only verifies --no-color doesn't crash
+	// and produces clean output.
 	out, err := executeCommand("simulate", "-t", "../../testdata/topologies/abilene.graphml", "--no-color")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
