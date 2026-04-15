@@ -66,9 +66,11 @@ func lawsonHanson(A *mat.Dense, b *mat.VecDense, n, m, maxIter int) (*mat.VecDen
 	// Z = zero set (indices where x = 0, constrained)
 	passive := make([]bool, n) // passive[j] = true means j is in P
 
+	At := A.T()
+
 	// w = Aᵀ(b - Ax), the negative gradient
 	w := mat.NewVecDense(n, nil)
-	computeGradient(A, b, x, w, m, n)
+	computeGradient(At, b, x, w, m)
 
 	iter := 0
 	for iter < maxIter {
@@ -145,21 +147,21 @@ func lawsonHanson(A *mat.Dense, b *mat.VecDense, n, m, maxIter int) (*mat.VecDen
 		}
 
 		// Recompute gradient
-		computeGradient(A, b, x, w, m, n)
+		computeGradient(At, b, x, w, m)
 		iter++
 	}
 
 	return x, iter, nil
 }
 
-// computeGradient computes w = Aᵀ(b - Ax)
-func computeGradient(A *mat.Dense, b, x, w *mat.VecDense, m, n int) {
+// computeGradient computes w = Aᵀ(b - Ax). At must be the transpose of A.
+func computeGradient(At mat.Matrix, b, x, w *mat.VecDense, m int) {
 	// r = b - Ax
 	r := mat.NewVecDense(m, nil)
-	r.MulVec(A, x)
+	r.MulVec(At.T(), x)
 	r.SubVec(b, r)
 	// w = Aᵀr
-	w.MulVec(A.T(), r)
+	w.MulVec(At, r)
 }
 
 // solvePassiveLS solves min ||A_P * z_P - b||₂ using QR factorization.
