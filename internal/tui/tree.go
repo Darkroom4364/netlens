@@ -134,14 +134,15 @@ func RenderTreeView(p *tomo.Problem, s *tomo.Solution, selected int, expanded ma
 				name = fmt.Sprintf("%d (%s)", l.Dst, lbl)
 			}
 			labels[i] = linkLabel{li, name}
-			if len(name) > globalMaxLabelW {
-				globalMaxLabelW = len(name)
+			if len([]rune(name)) > globalMaxLabelW {
+				globalMaxLabelW = len([]rune(name))
 			}
 		}
 		groupLabels[nid] = labels
 	}
+	// Panel: Width(w-2) sets outer width; border(2) + padding(2) = 4 chars frame → inner = w-6
 	// prefix "   → " = 5 chars, then padded label, then "  " gap, then bar, then " " + metrics (~30 chars)
-	barW := w - 5 - globalMaxLabelW - 2 - 30
+	barW := w - 6 - 5 - globalMaxLabelW - 2 - 30
 	if barW < 5 {
 		barW = 5
 	}
