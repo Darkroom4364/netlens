@@ -33,7 +33,7 @@
 
 **netlens** is a network tomography toolkit that infers internal network state, per-link latency, loss, and congestion, from edge measurements alone, without access to internal routers. Feed it traceroutes. See the invisible.
 
-The math has existed in textbooks for 20 years. A production-grade tool hasn't. The only prior implementation was a dead R package from 2012. netlens is the first modern, usable network tomography toolkit — 9 solvers, real data pipelines, and a benchmark framework, all in a single Go binary.
+The math has existed in textbooks for 20 years. The only prior implementation was a dead R package from 2012. netlens is the first modern, usable network tomography toolkit — 9 solvers, real data pipelines, and a benchmark framework, all in a single Go binary.
 
 ## Install
 
