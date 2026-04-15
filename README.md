@@ -125,8 +125,8 @@ Plus **Bootstrap CI** and **Conformal Prediction** for uncertainty quantificatio
 │  └── ECMP detection · IP alias resolution             │
 ├───────────────────────────────────────────────────────┤
 │  Inference engine — 9 solvers                         │
-│  ├── Tikhonov (L-curve / GCV) · NNLS · TSVD · ADMM  │
-│  ├── IRL1 · Vardi EM · Tomogravity · Laplacian       │
+│  ├── Tikhonov (L-curve / GCV) · NNLS · TSVD · ADMM    │
+│  ├── IRL1 · Vardi EM · Tomogravity · Laplacian        │
 │  ├── Bootstrap CI · Conformal Prediction              │
 │  └── Randomized SVD for large-scale matrices          │
 ├───────────────────────────────────────────────────────┤

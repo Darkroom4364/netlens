@@ -4,22 +4,29 @@ package tui
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/Darkroom4364/netlens/internal/tui/styles"
 	"github.com/Darkroom4364/netlens/tomo"
 )
 
-// RenderTreeView renders the tree panel showing links grouped by source node.
-func RenderTreeView(p *tomo.Problem, s *tomo.Solution, selected int, expanded map[int]bool, w, h int) string {
-	if p == nil || s == nil {
-		return "no data"
-	}
-	// Group links by source node.
-	type nodeGroup struct {
-		nodeID int
-		links  []int
-	}
+// Sort modes for tree view.
+const (
+	SortDefault        = 0
+	SortDelayDesc      = 1
+	SortDelayAsc       = 2
+	SortNameAlpha      = 3
+	SortCoverageDesc   = 4
+)
+
+type nodeGroup struct {
+	nodeID int
+	links  []int
+}
+
+// buildGroups groups links by source node, returning the map and insertion order.
+func buildGroups(p *tomo.Problem) (map[int]*nodeGroup, []int) {
 	seen := map[int]*nodeGroup{}
 	var order []int
 	for i, l := range p.Links {
@@ -31,6 +38,73 @@ func RenderTreeView(p *tomo.Problem, s *tomo.Solution, selected int, expanded ma
 		}
 		g.links = append(g.links, i)
 	}
+	return seen, order
+}
+
+// nodeLabel returns the display label for a node ID.
+func nodeLabel(p *tomo.Problem, nid int) string {
+	label := fmt.Sprintf("node %d", nid)
+	if p.Topo != nil {
+		for _, n := range p.Topo.Nodes() {
+			if n.ID == nid && n.Label != "" {
+				label = n.Label
+				break
+			}
+		}
+	}
+	return label
+}
+
+// computeOrder builds groups, applies filter and sort, and returns the result.
+func computeOrder(p *tomo.Problem, s *tomo.Solution, filterText string, sortMode int) (map[int]*nodeGroup, []int) {
+	seen, order := buildGroups(p)
+
+	// Filter by node label.
+	if filterText != "" {
+		ft := strings.ToLower(filterText)
+		var filtered []int
+		for _, nid := range order {
+			if strings.Contains(strings.ToLower(nodeLabel(p, nid)), ft) {
+				filtered = append(filtered, nid)
+			}
+		}
+		order = filtered
+	}
+
+	// Sort nodes (delay sorts require a non-nil solution).
+	switch sortMode {
+	case SortDelayDesc:
+		if s != nil {
+			sort.Slice(order, func(i, j int) bool {
+				return maxGroupDelay(seen[order[i]], s) > maxGroupDelay(seen[order[j]], s)
+			})
+		}
+	case SortDelayAsc:
+		if s != nil {
+			sort.Slice(order, func(i, j int) bool {
+				return maxGroupDelay(seen[order[i]], s) < maxGroupDelay(seen[order[j]], s)
+			})
+		}
+	case SortNameAlpha:
+		sort.Slice(order, func(i, j int) bool {
+			return nodeLabel(p, order[i]) < nodeLabel(p, order[j])
+		})
+	case SortCoverageDesc:
+		sort.Slice(order, func(i, j int) bool {
+			return sumGroupCoverage(seen[order[i]], p) > sumGroupCoverage(seen[order[j]], p)
+		})
+	}
+
+	return seen, order
+}
+
+// RenderTreeView renders the tree panel showing links grouped by source node.
+func RenderTreeView(p *tomo.Problem, s *tomo.Solution, selected int, expanded map[int]bool, filterText string, sortMode int, w, h int) string {
+	if p == nil || s == nil {
+		return "no data"
+	}
+	seen, order := computeOrder(p, s, filterText, sortMode)
+
 	// Summary.
 	congested := 0
 	for i := 0; i < s.X.Len(); i++ {
@@ -44,18 +118,10 @@ func RenderTreeView(p *tomo.Problem, s *tomo.Solution, selected int, expanded ma
 	}
 	summary := fmt.Sprintf(" %d links | %d congested | %.0f%% identifiable", p.NumLinks(), congested, identPct)
 	rows := []string{styles.Title.Render(summary)}
-	flatIdx := 0
+	flatIdx := 1 // row 0 is the summary row already added above
 	for _, nid := range order {
 		g := seen[nid]
-		label := fmt.Sprintf("node %d", nid)
-		if p.Topo != nil {
-			for _, n := range p.Topo.Nodes() {
-				if n.ID == nid && n.Label != "" {
-					label = n.Label
-					break
-				}
-			}
-		}
+		label := nodeLabel(p, nid)
 		arrow := "▶"
 		if expanded[nid] {
 			arrow = "▼"
@@ -127,4 +193,93 @@ func RenderTreeView(p *tomo.Problem, s *tomo.Solution, selected int, expanded ma
 		rows = rows[start : start+maxRows]
 	}
 	return styles.Panel.Width(w - 2).Render(strings.Join(rows, "\n"))
+}
+
+func maxGroupDelay(g *nodeGroup, s *tomo.Solution) float64 {
+	mx := 0.0
+	for _, li := range g.links {
+		if v := s.X.AtVec(li); v > mx {
+			mx = v
+		}
+	}
+	return mx
+}
+
+func sumGroupCoverage(g *nodeGroup, p *tomo.Problem) int {
+	total := 0
+	if p.Quality == nil {
+		return 0
+	}
+	for _, li := range g.links {
+		if li < len(p.Quality.CoveragePerLink) {
+			total += p.Quality.CoveragePerLink[li]
+		}
+	}
+	return total
+}
+
+// TreeRowCount returns the total number of visible rows in the tree view,
+// accounting for filtering, sorting, and expanded nodes.
+func TreeRowCount(p *tomo.Problem, s *tomo.Solution, expanded map[int]bool, filterText string, sortMode int) int {
+	if p == nil {
+		return 0
+	}
+	seen, order := computeOrder(p, s, filterText, sortMode)
+	count := 1 // summary row
+	for _, nid := range order {
+		count++ // node header
+		if expanded[nid] {
+			count += len(seen[nid].links)
+		}
+	}
+	return count
+}
+
+// CursorToNodeID returns the node ID at the given cursor position if it is a
+// node-header row, and -1 otherwise.
+func CursorToNodeID(p *tomo.Problem, s *tomo.Solution, cursor int, expanded map[int]bool, filterText string, sortMode int) int {
+	if p == nil {
+		return -1
+	}
+	seen, order := computeOrder(p, s, filterText, sortMode)
+	pos := 1 // pos 0 is the summary row
+	for _, nid := range order {
+		if cursor == pos {
+			return nid
+		}
+		pos++
+		if expanded[nid] {
+			pos += len(seen[nid].links)
+		}
+	}
+	return -1
+}
+
+// CursorToLinkIdx maps a flat cursor position (used in the tree view) to a
+// link index. Returns -1 if the cursor is on the summary row or a node header.
+func CursorToLinkIdx(p *tomo.Problem, s *tomo.Solution, cursor int, expanded map[int]bool, filterText string, sortMode int) int {
+	if p == nil {
+		return -1
+	}
+	seen, order := computeOrder(p, s, filterText, sortMode)
+	pos := 0 // summary row
+	if cursor == pos {
+		return -1
+	}
+	pos++
+	for _, nid := range order {
+		if cursor == pos {
+			return -1 // node header
+		}
+		pos++
+		if expanded[nid] {
+			for _, li := range seen[nid].links {
+				if cursor == pos {
+					return li
+				}
+				pos++
+			}
+		}
+	}
+	return -1
 }
