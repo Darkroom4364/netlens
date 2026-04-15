@@ -105,7 +105,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		case "j", "down":
-			m.cursor++
+			if m.cursor < TreeRowCount(m.problem, m.solution, m.expanded, m.filterText, m.sortMode)-1 {
+				m.cursor++
+			}
 		case "k", "up":
 			if m.cursor > 0 {
 				m.cursor--
@@ -181,7 +183,7 @@ func (m Model) View() string {
 	}
 
 	// Map cursor to link index for detail bar and heatmap.
-	linkIdx := CursorToLinkIdx(m.problem, m.cursor, m.expanded)
+	linkIdx := CursorToLinkIdx(m.problem, m.solution, m.cursor, m.expanded, m.filterText, m.sortMode)
 
 	// Main panel.
 	var main string

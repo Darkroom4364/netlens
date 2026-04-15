@@ -55,11 +55,8 @@ func nodeLabel(p *tomo.Problem, nid int) string {
 	return label
 }
 
-// RenderTreeView renders the tree panel showing links grouped by source node.
-func RenderTreeView(p *tomo.Problem, s *tomo.Solution, selected int, expanded map[int]bool, filterText string, sortMode int, w, h int) string {
-	if p == nil || s == nil {
-		return "no data"
-	}
+// computeOrder builds groups, applies filter and sort, and returns the result.
+func computeOrder(p *tomo.Problem, s *tomo.Solution, filterText string, sortMode int) (map[int]*nodeGroup, []int) {
 	seen, order := buildGroups(p)
 
 	// Filter by node label.
@@ -74,16 +71,20 @@ func RenderTreeView(p *tomo.Problem, s *tomo.Solution, selected int, expanded ma
 		order = filtered
 	}
 
-	// Sort nodes.
+	// Sort nodes (delay sorts require a non-nil solution).
 	switch sortMode {
 	case SortDelayDesc:
-		sort.Slice(order, func(i, j int) bool {
-			return maxGroupDelay(seen[order[i]], s) > maxGroupDelay(seen[order[j]], s)
-		})
+		if s != nil {
+			sort.Slice(order, func(i, j int) bool {
+				return maxGroupDelay(seen[order[i]], s) > maxGroupDelay(seen[order[j]], s)
+			})
+		}
 	case SortDelayAsc:
-		sort.Slice(order, func(i, j int) bool {
-			return maxGroupDelay(seen[order[i]], s) < maxGroupDelay(seen[order[j]], s)
-		})
+		if s != nil {
+			sort.Slice(order, func(i, j int) bool {
+				return maxGroupDelay(seen[order[i]], s) < maxGroupDelay(seen[order[j]], s)
+			})
+		}
 	case SortNameAlpha:
 		sort.Slice(order, func(i, j int) bool {
 			return nodeLabel(p, order[i]) < nodeLabel(p, order[j])
@@ -93,6 +94,16 @@ func RenderTreeView(p *tomo.Problem, s *tomo.Solution, selected int, expanded ma
 			return sumGroupCoverage(seen[order[i]], p) > sumGroupCoverage(seen[order[j]], p)
 		})
 	}
+
+	return seen, order
+}
+
+// RenderTreeView renders the tree panel showing links grouped by source node.
+func RenderTreeView(p *tomo.Problem, s *tomo.Solution, selected int, expanded map[int]bool, filterText string, sortMode int, w, h int) string {
+	if p == nil || s == nil {
+		return "no data"
+	}
+	seen, order := computeOrder(p, s, filterText, sortMode)
 
 	// Summary.
 	congested := 0
@@ -207,13 +218,30 @@ func sumGroupCoverage(g *nodeGroup, p *tomo.Problem) int {
 	return total
 }
 
+// TreeRowCount returns the total number of visible rows in the tree view,
+// accounting for filtering, sorting, and expanded nodes.
+func TreeRowCount(p *tomo.Problem, s *tomo.Solution, expanded map[int]bool, filterText string, sortMode int) int {
+	if p == nil {
+		return 0
+	}
+	seen, order := computeOrder(p, s, filterText, sortMode)
+	count := 1 // summary row
+	for _, nid := range order {
+		count++ // node header
+		if expanded[nid] {
+			count += len(seen[nid].links)
+		}
+	}
+	return count
+}
+
 // CursorToLinkIdx maps a flat cursor position (used in the tree view) to a
 // link index. Returns -1 if the cursor is on the summary row or a node header.
-func CursorToLinkIdx(p *tomo.Problem, cursor int, expanded map[int]bool) int {
+func CursorToLinkIdx(p *tomo.Problem, s *tomo.Solution, cursor int, expanded map[int]bool, filterText string, sortMode int) int {
 	if p == nil {
 		return -1
 	}
-	seen, order := buildGroups(p)
+	seen, order := computeOrder(p, s, filterText, sortMode)
 	pos := 0 // summary row
 	if cursor == pos {
 		return -1

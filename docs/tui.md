@@ -25,9 +25,16 @@ The screen is split into three regions:
 
 | Key | Action |
 |-----|--------|
-| `j` / `Down` | Select next link |
-| `k` / `Up` | Select previous link |
-| `q` / `Ctrl+C` | Quit |
+| `j` / `↓` | Navigate down |
+| `k` / `↑` | Navigate up |
+| `Enter` | Expand/collapse node |
+| `h` | Heatmap view |
+| `t` | Tree view |
+| `/` | Filter by node name |
+| `s` | Cycle sort mode |
+| `m` | Cycle solver and re-solve |
+| `?` | Help overlay |
+| `q` | Quit |
 
 ## Color Coding
 
@@ -57,12 +64,12 @@ timer. Each tick calls `solver.Solve(problem)` and replaces the current
 solution, so the display updates live as underlying measurements change.
 
 ```go
-model := tui.NewWithRefresh(problem, initialSolution, solver, 5*time.Second)
+model := tui.NewWithRefresh(problem, initialSolution, solvers, solverIdx, 5*time.Second)
 p := tea.NewProgram(model, tea.WithAltScreen())
 p.Run()
 ```
 
-If `solver` is nil, `NewWithRefresh` behaves identically to `New` (no
+If `solvers` is nil, `NewWithRefresh` behaves identically to `New` (no
 auto-refresh). The refresh rate is the `time.Duration` passed as the last
 argument.
 
@@ -72,10 +79,10 @@ Both constructors return a `tui.Model` that satisfies `bubbletea.Model`:
 
 ```go
 // One-shot display of a pre-computed solution.
-tui.New(problem, solution)
+tui.New(problem, solution, solvers, solverIdx)
 
 // Live-updating display that re-solves every interval.
-tui.NewWithRefresh(problem, solution, solver, rate)
+tui.NewWithRefresh(problem, solution, solvers, solverIdx, rate)
 ```
 
 Pass the model to `tea.NewProgram` with `tea.WithAltScreen()` for full-screen
