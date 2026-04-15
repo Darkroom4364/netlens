@@ -12,7 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       packages: ${{ steps.detect.outputs.packages }}
-      full_suite: ${{ steps.detect.outputs.full_suite }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,18 +22,21 @@ jobs:
         run: |
           # Full suite for: pushes to main, PRs targeting main (dev→main)
           if [[ "${{ github.base_ref }}" == "main" || "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "full_suite=true" >> "$GITHUB_OUTPUT"
             echo "packages=./..." >> "$GITHUB_OUTPUT"
             exit 0
           fi
-
-          echo "full_suite=false" >> "$GITHUB_OUTPUT"
 
           # Get changed files relative to base
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             BASE="${{ github.event.pull_request.base.sha }}"
           else
             BASE="${{ github.event.before }}"
+          fi
+
+          # First push on a new branch — no valid base to diff against
+          if [[ "$BASE" == "0000000000000000000000000000000000000000" || -z "$BASE" ]]; then
+            echo "packages=./..." >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
           CHANGED=$(git diff --name-only "$BASE" HEAD -- '*.go' 'go.mod' 'go.sum')
@@ -78,6 +80,19 @@ jobs:
 
       - name: Test (race detector, short mode)
         run: go test -race -short -timeout=300s ${{ needs.changes.outputs.packages }}
+
+  test-gate:
+    name: test gate
+    needs: [changes, test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pass if tests passed or were skipped
+        run: |
+          if [[ "${{ needs.test.result }}" == "success" || "${{ needs.test.result }}" == "skipped" ]]; then
+            exit 0
+          fi
+          exit 1
 
   lint:
     runs-on: ubuntu-latest
