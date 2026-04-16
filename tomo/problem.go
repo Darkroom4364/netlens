@@ -64,6 +64,8 @@ type Solution struct {
 }
 
 // Solver is the interface all inference methods implement.
+// Implementations must be safe for concurrent Solve calls;
+// Solve must not mutate receiver state.
 type Solver interface {
 	Name() string
 	Solve(p *Problem) (*Solution, error)
