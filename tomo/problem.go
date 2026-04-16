@@ -68,3 +68,27 @@ type Solver interface {
 	Name() string
 	Solve(p *Problem) (*Solution, error)
 }
+
+// identifiabilityMask builds a per-link boolean slice from the quality analysis.
+func identifiabilityMask(q *MatrixQuality, n int) []bool {
+	mask := make([]bool, n)
+	if q != nil {
+		for i := range mask {
+			mask[i] = q.IsIdentifiable(i)
+		}
+	}
+	return mask
+}
+
+// newSolution constructs a Solution with residual, identifiability, and timing.
+func newSolution(p *Problem, x *mat.VecDense, method string, start time.Time, meta map[string]any) *Solution {
+	_, n := p.A.Dims()
+	return &Solution{
+		X:            x,
+		Identifiable: identifiabilityMask(p.Quality, n),
+		Residual:     computeResidual(p.A, x, p.B),
+		Method:       method,
+		Duration:     time.Since(start),
+		Metadata:     meta,
+	}
+}

@@ -51,17 +51,9 @@ func (s *LaplacianSolver) Solve(p *Problem) (*Solution, error) {
 	if err != nil {
 		return nil, err
 	}
-	identifiable := make([]bool, n)
-	if p.Quality != nil {
-		for i := range identifiable {
-			identifiable[i] = p.Quality.IsIdentifiable(i)
-		}
-	}
-	return &Solution{
-		X: x, Identifiable: identifiable, Residual: computeResidual(p.A, x, p.B),
-		Method: "laplacian", Duration: time.Since(start),
-		Metadata: map[string]any{"lambda": lambda, "singular_values": sv},
-	}, nil
+	return newSolution(p, x, "laplacian", start, map[string]any{
+		"lambda": lambda, "singular_values": sv,
+	}), nil
 }
 
 // solveLaplacianAug solves min||[A; √λL]x - [b; 0]||² via SVD.
