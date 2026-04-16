@@ -31,11 +31,9 @@ type Node struct {
 
 // Link represents a directed network link between two nodes.
 type Link struct {
-	ID    int
-	Src   int
-	Dst   int
-	SrcIP string // optional: real IP if known
-	DstIP string // optional: real IP if known
+	ID  int
+	Src int
+	Dst int
 }
 
 // Hop is a single hop in a traceroute-style measurement.
@@ -62,7 +60,6 @@ type PathMeasurement struct {
 	Dst       string
 	Hops      []Hop
 	RTTs      []time.Duration // multiple samples per path
-	Loss      float64         // packet loss rate 0.0-1.0
 	Timestamp time.Time
 	Weight    float64 // measurement confidence (default 1.0)
 }

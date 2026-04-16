@@ -35,7 +35,6 @@ func NewICMPProber() *ICMPProber {
 func (p *ICMPProber) Probe(ctx context.Context, target string) (*tomo.PathMeasurement, error) {
 	var hops []tomo.Hop
 	var rtts []time.Duration
-	var totalLoss float64
 
 	for ttl := 1; ttl <= p.MaxHops; ttl++ {
 		if ctx.Err() != nil {
@@ -63,7 +62,6 @@ func (p *ICMPProber) Probe(ctx context.Context, target string) (*tomo.PathMeasur
 		if stats.PacketsRecv == 0 {
 			// No reply — anonymous hop (TTL expired or filtered).
 			hops = append(hops, tomo.Hop{TTL: ttl, Anonymous: true})
-			totalLoss += 1.0
 			continue
 		}
 
@@ -74,7 +72,6 @@ func (p *ICMPProber) Probe(ctx context.Context, target string) (*tomo.PathMeasur
 		}
 		hops = append(hops, hop)
 		rtts = append(rtts, stats.Rtts...)
-		totalLoss += stats.PacketLoss / 100.0
 
 		// Reached the destination — stop probing.
 		if stats.Addr == target {
@@ -82,18 +79,11 @@ func (p *ICMPProber) Probe(ctx context.Context, target string) (*tomo.PathMeasur
 		}
 	}
 
-	nHops := len(hops)
-	avgLoss := 0.0
-	if nHops > 0 {
-		avgLoss = totalLoss / float64(nHops)
-	}
-
 	return &tomo.PathMeasurement{
 		Src:       "local",
 		Dst:       target,
 		Hops:      hops,
 		RTTs:      rtts,
-		Loss:      avgLoss,
 		Timestamp: time.Now(),
 		Weight:    1.0,
 	}, nil
