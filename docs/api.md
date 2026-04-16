@@ -76,11 +76,9 @@ type Node struct {
 }
 
 type Link struct {
-    ID    int
-    Src   int
-    Dst   int
-    SrcIP string // optional
-    DstIP string // optional
+    ID  int
+    Src int
+    Dst int
 }
 ```
 
@@ -98,7 +96,6 @@ type PathMeasurement struct {
     Dst       string
     Hops      []Hop
     RTTs      []time.Duration // multiple samples per path
-    Loss      float64         // 0.0-1.0
     Timestamp time.Time
     Weight    float64         // measurement confidence (default 1.0)
 }

@@ -10,8 +10,6 @@ import (
 type InferOpts struct {
 	// MaxAnonymousFrac: discard paths with more than this fraction of anonymous hops (default 0.3).
 	MaxAnonymousFrac float64
-	// ASLevel: if true, use AS-level granularity instead of router-level (placeholder for future).
-	ASLevel bool
 	// AliasResolution: if true, run IP alias resolution (Kapar) to merge
 	// multiple interfaces of the same router into a single node.
 	AliasResolution bool
