@@ -9,6 +9,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/Darkroom4364/netlens/internal/style"
 	"github.com/Darkroom4364/netlens/tomo"
 )
 
@@ -74,7 +75,7 @@ func RenderDetailBar(p *tomo.Problem, s *tomo.Solution, linkIdx int, w int) stri
 	}
 
 	line := fmt.Sprintf("%s  %.2fms ±%.2f  σ=%.1f  paths=%d  ident=%s", name, delay, conf, sigma, paths, ident)
-	if delay > 20 {
+	if delay > style.DelayCongestionMS {
 		line += "  " + alertStyle.Render("⚠ CONGESTED")
 	}
 	return detailStyle.Width(w - 2).Render(line)

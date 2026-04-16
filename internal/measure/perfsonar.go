@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -16,8 +15,8 @@ import (
 
 // PerfSONARSource is an HTTP client for the esmond REST API (PerfSONAR).
 type PerfSONARSource struct {
-	BaseURL    string // e.g., "https://ps.example.com/esmond/perfsonar/archive"
-	HTTPClient *http.Client
+	BaseURL string // e.g., "https://ps.example.com/esmond/perfsonar/archive"
+	rc      *RetryableClient
 }
 
 // NewPerfSONARSource creates a new PerfSONAR esmond API client.
@@ -27,8 +26,8 @@ func NewPerfSONARSource(baseURL string, client *http.Client) *PerfSONARSource {
 		client = &http.Client{Timeout: 30 * time.Second}
 	}
 	return &PerfSONARSource{
-		BaseURL:    strings.TrimRight(baseURL, "/"),
-		HTTPClient: client,
+		BaseURL: strings.TrimRight(baseURL, "/"),
+		rc:      &RetryableClient{Client: client, MaxRetries: 3},
 	}
 }
 
@@ -129,44 +128,5 @@ func (s *PerfSONARSource) resolveURI(path string) string {
 
 // doGet performs a GET request with 429 Retry-After handling.
 func (s *PerfSONARSource) doGet(ctx context.Context, rawURL string) ([]byte, error) {
-	const maxRetries = 3
-
-	for attempt := 0; attempt <= maxRetries; attempt++ {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
-		if err != nil {
-			return nil, fmt.Errorf("create request: %w", err)
-		}
-		req.Header.Set("Accept", "application/json")
-
-		resp, err := s.HTTPClient.Do(req)
-		if err != nil {
-			return nil, fmt.Errorf("http get %s: %w", rawURL, err)
-		}
-
-		body, err := io.ReadAll(resp.Body)
-		_ = resp.Body.Close()
-		if err != nil {
-			return nil, fmt.Errorf("read response body: %w", err)
-		}
-
-		if resp.StatusCode == http.StatusTooManyRequests {
-			retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"))
-			if attempt == maxRetries {
-				return nil, fmt.Errorf("rate limited after %d retries (GET %s)", maxRetries, rawURL)
-			}
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			case <-time.After(retryAfter):
-				continue
-			}
-		}
-
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			return nil, fmt.Errorf("HTTP %d from %s: %s", resp.StatusCode, rawURL, truncateBody(body, 200))
-		}
-
-		return body, nil
-	}
-	return nil, fmt.Errorf("exhausted retries for %s", rawURL)
+	return s.rc.Get(ctx, rawURL, "")
 }

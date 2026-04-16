@@ -107,23 +107,7 @@ func (s *TomogravitySolver) Solve(p *Problem) (*Solution, error) {
 		}
 	}
 
-	residual := computeResidual(p.A, x, p.B)
-
-	identifiable := make([]bool, n)
-	if p.Quality != nil {
-		for i := range identifiable {
-			identifiable[i] = p.Quality.IsIdentifiable(i)
-		}
-	}
-
-	return &Solution{
-		X:            x,
-		Identifiable: identifiable,
-		Residual:     residual,
-		Method:       "tomogravity",
-		Duration:     time.Since(start),
-		Metadata: map[string]any{
-			"lambda": lambda,
-		},
-	}, nil
+	return newSolution(p, x, "tomogravity", start, map[string]any{
+		"lambda": lambda,
+	}), nil
 }

@@ -116,24 +116,8 @@ func (s *VardiEMSolver) Solve(p *Problem) (*Solution, error) {
 	}
 
 	xVec := mat.NewVecDense(n, x)
-	residual := computeResidual(p.A, xVec, p.B)
-
-	identifiable := make([]bool, n)
-	if p.Quality != nil {
-		for i := range identifiable {
-			identifiable[i] = p.Quality.IsIdentifiable(i)
-		}
-	}
-
-	return &Solution{
-		X:            xVec,
-		Identifiable: identifiable,
-		Residual:     residual,
-		Method:       "vardi-em",
-		Duration:     time.Since(start),
-		Metadata: map[string]any{
-			"iterations": iter,
-			"tolerance":  tol,
-		},
-	}, nil
+	return newSolution(p, xVec, "vardi-em", start, map[string]any{
+		"iterations": iter,
+		"tolerance":  tol,
+	}), nil
 }
