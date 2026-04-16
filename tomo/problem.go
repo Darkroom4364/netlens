@@ -1,6 +1,7 @@
 package tomo
 
 import (
+	"sync"
 	"time"
 
 	"gonum.org/v1/gonum/mat"
@@ -16,6 +17,20 @@ type Problem struct {
 	Paths   []PathSpec
 	Links   []Link
 	Quality *MatrixQuality // Computed during construction
+
+	svdOnce sync.Once // guards lazy SVD computation
+	svdFull *mat.SVD  // cached full SVD of A
+	svdOK   bool      // whether Factorize succeeded
+}
+
+// SVD returns the cached full SVD of A, computing it on first call.
+// Thread-safe via sync.Once.
+func (p *Problem) SVD() (*mat.SVD, bool) {
+	p.svdOnce.Do(func() {
+		p.svdFull = &mat.SVD{}
+		p.svdOK = p.svdFull.Factorize(p.A, mat.SVDFull)
+	})
+	return p.svdFull, p.svdOK
 }
 
 // NumPaths returns the number of measurement paths (rows of A).
