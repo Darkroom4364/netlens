@@ -12,6 +12,14 @@ import (
 
 var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
+// Delay thresholds (milliseconds) used for color coding and congestion alerts.
+const (
+	DelayLowMS        = 2  // green→yellow boundary in DOT output
+	DelayMediumMS     = 5  // green→yellow boundary in CLI/TUI
+	DelayHighMS       = 10 // yellow→red boundary in DOT output
+	DelayCongestionMS = 20 // congestion alert threshold in CLI/TUI
+)
+
 // Enabled controls whether ANSI styling is applied.
 // Automatically set based on TTY detection and NO_COLOR env var.
 // Can be overridden via SetEnabled (e.g., --no-color flag).
@@ -77,10 +85,10 @@ func ColorDelay(ms float64) string {
 	if ms < 0 {
 		return Red(s)
 	}
-	if ms < 5 {
+	if ms < DelayMediumMS {
 		return Green(s)
 	}
-	if ms < 20 {
+	if ms < DelayCongestionMS {
 		return Yellow(s)
 	}
 	return Red(s)

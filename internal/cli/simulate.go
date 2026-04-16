@@ -131,7 +131,7 @@ the known ground truth.`,
 			// Summary line
 			congested := 0
 			for i := 0; i < p.NumLinks(); i++ {
-				if sol.X.AtVec(i) > 20 {
+				if sol.X.AtVec(i) > style.DelayCongestionMS {
 					congested++
 				}
 			}
