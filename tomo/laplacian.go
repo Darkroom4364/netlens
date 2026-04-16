@@ -29,15 +29,39 @@ func (s *LaplacianSolver) Solve(p *Problem) (*Solution, error) {
 
 	lambda := s.Lambda
 	if lambda <= 0 {
-		// Auto-select: try log-spaced values, pick lowest combined cost
+		// Auto-select λ via Cholesky-based grid search.
+		// Precompute AᵀA, Aᵀb, LᵀL once — then each λ only needs
+		// a Cholesky solve instead of a full SVD on the augmented matrix.
+		//
+		// Note: if AᵀA + λLᵀL is singular for all candidates (e.g. heavily
+		// under-determined problems where A and L share a null-space direction),
+		// Cholesky will fail and bestLam stays at 1.0. The final solve on the
+		// chosen λ still uses the SVD-based solveLaplacianAug which handles
+		// rank deficiency, so output quality is bounded but λ may be suboptimal.
+		At := p.A.T()
+		AtA := mat.NewDense(n, n, nil)
+		AtA.Mul(At, p.A)
+		Atb := mat.NewVecDense(n, nil)
+		Atb.MulVec(At, p.B)
+		LtL := mat.NewDense(n, n, nil)
+		LtL.Mul(L.T(), L)
+
 		bestLam, bestCost := 1.0, math.Inf(1)
+		M := mat.NewDense(n, n, nil)
+		Lx := mat.NewVecDense(n, nil)
+		x := mat.NewVecDense(n, nil)
+		var chol mat.Cholesky
 		for i := 0; i < 40; i++ {
 			lam := math.Pow(10, -4+float64(i)*0.2)
-			x, _, err := solveLaplacianAug(p.A, p.B, L, m, n, lam)
-			if err != nil {
+			// M = AᵀA + λ·LᵀL
+			M.Scale(lam, LtL)
+			M.Add(M, AtA)
+			if !chol.Factorize(mat.NewSymDense(n, M.RawMatrix().Data)) {
 				continue
 			}
-			Lx := mat.NewVecDense(n, nil)
+			if err := chol.SolveVecTo(x, Atb); err != nil {
+				continue
+			}
 			Lx.MulVec(L, x)
 			cost := computeResidual(p.A, x, p.B) + lam*mat.Norm(Lx, 2)
 			if cost < bestCost {
