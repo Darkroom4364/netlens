@@ -63,6 +63,7 @@ func (s *ADMMSolver) Solve(p *Problem) (*Solution, error) {
 	// Build (AᵀA + ρI) and compute its Cholesky factorization.
 	// If Cholesky fails (e.g., near-singular for underdetermined problems),
 	// retry with larger ρ before giving up.
+	originalRho := rho
 	lhs := mat.NewDense(n, n, nil)
 	var chol mat.Cholesky
 	cholOK := false
@@ -75,10 +76,18 @@ func (s *ADMMSolver) Solve(p *Problem) (*Solution, error) {
 			cholOK = true
 			break
 		}
-		rho *= 10 // increase penalty to improve conditioning
+		if attempt < 4 {
+			rho *= 10 // increase penalty to improve conditioning
+		}
 	}
 	if !cholOK {
 		return nil, fmt.Errorf("admm: Cholesky factorization failed after scaling rho to %.1e; matrix may be degenerate", rho)
+	}
+
+	// If rho was bumped for Cholesky stability, rescale lambda so that
+	// kappa = lambda/rho stays equivalent to the original ratio.
+	if rho != originalRho {
+		lambda = lambda * (rho / originalRho)
 	}
 
 	// ADMM variables
