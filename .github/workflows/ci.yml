@@ -7,7 +7,56 @@ on:
     branches: [main, dev]
 
 jobs:
+  # Detect which packages changed to scope tests on feature branches
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.detect.outputs.packages }}
+      full_suite: ${{ steps.detect.outputs.full_suite }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed packages
+        id: detect
+        run: |
+          # Full suite for: pushes to main, PRs targeting main (dev→main)
+          if [[ "${{ github.base_ref }}" == "main" || "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "full_suite=true" >> "$GITHUB_OUTPUT"
+            echo "packages=./..." >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "full_suite=false" >> "$GITHUB_OUTPUT"
+
+          # Get changed files relative to base
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+
+          CHANGED=$(git diff --name-only "$BASE" HEAD -- '*.go' 'go.mod' 'go.sum')
+
+          if [ -z "$CHANGED" ]; then
+            echo "packages=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # If go.mod/go.sum changed, run everything
+          if echo "$CHANGED" | grep -qE '^go\.(mod|sum)$'; then
+            echo "packages=./..." >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Extract unique Go package directories from changed files
+          PKGS=$(echo "$CHANGED" | xargs -I{} dirname {} | sort -u | sed 's|^|./|' | paste -sd ' ' -)
+          echo "packages=$PKGS" >> "$GITHUB_OUTPUT"
+
   test:
+    needs: changes
+    if: needs.changes.outputs.packages != ''
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -25,23 +74,10 @@ jobs:
         run: go build -v ./...
 
       - name: Test
-        run: go test -v -timeout=300s ./...
+        run: go test -v -timeout=300s ${{ needs.changes.outputs.packages }}
 
       - name: Test (race detector, short mode)
-        run: go test -race -short -timeout=300s ./...
-
-  test-gate:
-    name: test gate
-    if: always()
-    needs: [test, lint]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check results
-        run: |
-          if [[ "${{ needs.test.result }}" == "failure" || "${{ needs.lint.result }}" == "failure" ]]; then
-            echo "One or more required jobs failed"
-            exit 1
-          fi
+        run: go test -race -short -timeout=300s ${{ needs.changes.outputs.packages }}
 
   lint:
     runs-on: ubuntu-latest
