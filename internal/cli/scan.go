@@ -225,7 +225,7 @@ func printScanTable(p *tomo.Problem, sol *tomo.Solution, top int, quiet bool) {
 	// Summary line
 	congested := 0
 	for i := range p.Links {
-		if q.IsIdentifiable(i) && sol.X.AtVec(i) > 20 {
+		if q.IsIdentifiable(i) && sol.X.AtVec(i) > style.DelayCongestionMS {
 			congested++
 		}
 	}

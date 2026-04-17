@@ -59,28 +59,10 @@ func (s *TSVDSolver) Solve(p *Problem) (*Solution, error) {
 		}
 	}
 
-	// Compute residual ||Ax - b||
-	residual := computeResidual(p.A, x, p.B)
-
-	// Build identifiability mask from the quality analysis
-	identifiable := make([]bool, n)
-	if p.Quality != nil {
-		for i := range identifiable {
-			identifiable[i] = p.Quality.IsIdentifiable(i)
-		}
-	}
-
-	return &Solution{
-		X:            x,
-		Identifiable: identifiable,
-		Residual:     residual,
-		Method:       "tsvd",
-		Duration:     time.Since(start),
-		Metadata: map[string]any{
-			"truncation_rank": k,
-			"singular_values": sv,
-		},
-	}, nil
+	return newSolution(p, x, "tsvd", start, map[string]any{
+		"truncation_rank": k,
+		"singular_values": sv,
+	}), nil
 }
 
 // truncationRank determines k using the discrepancy principle or user override.

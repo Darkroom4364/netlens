@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -19,14 +18,14 @@ const DefaultRIPEAtlasBaseURL = "https://atlas.ripe.net/api/v2"
 
 // RIPEAtlasSource is an HTTP client for the RIPE Atlas v2 API.
 type RIPEAtlasSource struct {
-	APIKey     string
-	BaseURL    string
-	HTTPClient *http.Client
+	APIKey  string
+	BaseURL string
+	rc      *RetryableClient
 }
 
 // NewRIPEAtlasSource creates a new RIPE Atlas API client.
 // If baseURL is empty, the default production URL is used.
-// If httpClient is nil, http.DefaultClient is used.
+// If httpClient is nil, a default client with 30s timeout is used.
 func NewRIPEAtlasSource(apiKey, baseURL string, httpClient *http.Client) *RIPEAtlasSource {
 	if baseURL == "" {
 		baseURL = DefaultRIPEAtlasBaseURL
@@ -35,9 +34,9 @@ func NewRIPEAtlasSource(apiKey, baseURL string, httpClient *http.Client) *RIPEAt
 		httpClient = &http.Client{Timeout: 30 * time.Second}
 	}
 	return &RIPEAtlasSource{
-		APIKey:     apiKey,
-		BaseURL:    baseURL,
-		HTTPClient: httpClient,
+		APIKey:  apiKey,
+		BaseURL: baseURL,
+		rc:      &RetryableClient{Client: httpClient, MaxRetries: 3},
 	}
 }
 
@@ -213,7 +212,7 @@ func (s *RIPEAtlasSource) FetchResults(ctx context.Context, msmID int, start, st
 		u += "?" + params.Encode()
 	}
 
-	body, err := s.doGet(ctx, u)
+	body, err := s.doGet(ctx,u)
 	if err != nil {
 		return nil, fmt.Errorf("fetch results for msm %d: %w", msmID, err)
 	}
@@ -225,7 +224,7 @@ func (s *RIPEAtlasSource) FetchResults(ctx context.Context, msmID int, start, st
 func (s *RIPEAtlasSource) FetchStatus(ctx context.Context, msmID int) (*MeasurementStatus, error) {
 	u := fmt.Sprintf("%s/measurements/%d/", s.BaseURL, msmID)
 
-	body, err := s.doGet(ctx, u)
+	body, err := s.doGet(ctx,u)
 	if err != nil {
 		return nil, fmt.Errorf("fetch status for msm %d: %w", msmID, err)
 	}
@@ -258,7 +257,7 @@ func (s *RIPEAtlasSource) SearchMeasurements(ctx context.Context, query SearchQu
 
 	var all []MeasurementInfo
 	for u != "" {
-		body, err := s.doGet(ctx, u)
+		body, err := s.doGet(ctx,u)
 		if err != nil {
 			return nil, fmt.Errorf("search measurements: %w", err)
 		}
@@ -321,72 +320,9 @@ func (s *RIPEAtlasSource) WaitForResults(ctx context.Context, msmID int, timeout
 
 // doGet performs an authenticated GET request with rate-limit handling.
 func (s *RIPEAtlasSource) doGet(ctx context.Context, rawURL string) ([]byte, error) {
-	const maxRetries = 3
-
-	for attempt := 0; attempt <= maxRetries; attempt++ {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
-		if err != nil {
-			return nil, fmt.Errorf("create request: %w", err)
-		}
-
-		if s.APIKey != "" {
-			req.Header.Set("Authorization", "Key "+s.APIKey)
-		}
-		req.Header.Set("Accept", "application/json")
-
-		resp, err := s.HTTPClient.Do(req)
-		if err != nil {
-			return nil, fmt.Errorf("http get %s: %w", rawURL, err)
-		}
-
-		body, err := io.ReadAll(resp.Body)
-		_ = resp.Body.Close()
-		if err != nil {
-			return nil, fmt.Errorf("read response body: %w", err)
-		}
-
-		if resp.StatusCode == http.StatusTooManyRequests {
-			retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"))
-			if attempt == maxRetries {
-				return nil, fmt.Errorf("rate limited after %d retries (GET %s)", maxRetries, rawURL)
-			}
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			case <-time.After(retryAfter):
-				continue
-			}
-		}
-
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			return nil, fmt.Errorf("HTTP %d from %s: %s", resp.StatusCode, rawURL, truncateBody(body, 200))
-		}
-
-		return body, nil
+	auth := ""
+	if s.APIKey != "" {
+		auth = "Key " + s.APIKey
 	}
-	return nil, fmt.Errorf("exhausted retries for %s", rawURL)
-}
-
-// parseRetryAfter parses the Retry-After header value (seconds).
-// Falls back to 5 seconds if the header is missing or unparseable.
-func parseRetryAfter(val string) time.Duration {
-	if val == "" {
-		return 5 * time.Second
-	}
-	secs, err := strconv.Atoi(val)
-	if err != nil || secs < 0 {
-		return 5 * time.Second
-	}
-	if secs == 0 {
-		return 100 * time.Millisecond
-	}
-	return time.Duration(secs) * time.Second
-}
-
-// truncateBody returns a string of at most n bytes from body, for error messages.
-func truncateBody(body []byte, n int) string {
-	if len(body) <= n {
-		return string(body)
-	}
-	return string(body[:n]) + "..."
+	return s.rc.Get(ctx, rawURL, auth)
 }

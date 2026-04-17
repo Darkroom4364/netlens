@@ -126,19 +126,8 @@ func (s *IRL1Solver) Solve(p *Problem) (*Solution, error) {
 		}
 	}
 
-	residual := computeResidual(p.A, x, p.B)
-	identifiable := make([]bool, n)
-	if p.Quality != nil {
-		for i := range identifiable {
-			identifiable[i] = p.Quality.IsIdentifiable(i)
-		}
-	}
-	return &Solution{
-		X: x, Identifiable: identifiable, Residual: residual,
-		Method: "irl1", Duration: time.Since(start),
-		Metadata: map[string]any{
-			"outer_iterations": outerIter, "total_iterations": totalIters,
-			"lambda": lambda, "rho": rho, "epsilon": eps,
-		},
-	}, nil
+	return newSolution(p, x, "irl1", start, map[string]any{
+		"outer_iterations": outerIter, "total_iterations": totalIters,
+		"lambda": lambda, "rho": rho, "epsilon": eps,
+	}), nil
 }

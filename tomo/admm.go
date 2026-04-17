@@ -121,27 +121,11 @@ func (s *ADMMSolver) Solve(p *Problem) (*Solution, error) {
 		}
 	}
 
-	residual := computeResidual(p.A, x, p.B)
-
-	identifiable := make([]bool, n)
-	if p.Quality != nil {
-		for i := range identifiable {
-			identifiable[i] = p.Quality.IsIdentifiable(i)
-		}
-	}
-
-	return &Solution{
-		X:            x,
-		Identifiable: identifiable,
-		Residual:     residual,
-		Method:       "admm",
-		Duration:     time.Since(start),
-		Metadata: map[string]any{
-			"iterations": iters,
-			"lambda":     lambda,
-			"rho":        rho,
-		},
-	}, nil
+	return newSolution(p, x, "admm", start, map[string]any{
+		"iterations": iters,
+		"lambda":     lambda,
+		"rho":        rho,
+	}), nil
 }
 
 // softThreshold computes sign(v) * max(|v| - κ, 0).

@@ -36,25 +36,9 @@ func (s *NNLSSolver) Solve(p *Problem) (*Solution, error) {
 		return nil, fmt.Errorf("nnls: %w", err)
 	}
 
-	residual := computeResidual(p.A, x, p.B)
-
-	identifiable := make([]bool, n)
-	if p.Quality != nil {
-		for i := range identifiable {
-			identifiable[i] = p.Quality.IsIdentifiable(i)
-		}
-	}
-
-	return &Solution{
-		X:            x,
-		Identifiable: identifiable,
-		Residual:     residual,
-		Method:       "nnls",
-		Duration:     time.Since(start),
-		Metadata: map[string]any{
-			"iterations": iters,
-		},
-	}, nil
+	return newSolution(p, x, "nnls", start, map[string]any{
+		"iterations": iters,
+	}), nil
 }
 
 // lawsonHanson implements the Lawson-Hanson NNLS algorithm.

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/Darkroom4364/netlens/internal/style"
 	"github.com/Darkroom4364/netlens/tomo"
 )
 
@@ -60,9 +61,9 @@ func (f *DOTFormatter) Format(w io.Writer, p *tomo.Problem, s *tomo.Solution) er
 
 func delayColor(ms float64) string {
 	switch {
-	case ms < 2:
+	case ms < style.DelayLowMS:
 		return "green"
-	case ms <= 10:
+	case ms <= style.DelayHighMS:
 		return "yellow"
 	default:
 		return "red"
