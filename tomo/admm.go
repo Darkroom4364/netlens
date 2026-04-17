@@ -60,15 +60,25 @@ func (s *ADMMSolver) Solve(p *Problem) (*Solution, error) {
 		lambda = 0.1 * maxAbsAtb
 	}
 
-	// Build (AᵀA + ρI) and compute its Cholesky factorization
+	// Build (AᵀA + ρI) and compute its Cholesky factorization.
+	// If Cholesky fails (e.g., near-singular for underdetermined problems),
+	// retry with larger ρ before giving up.
 	lhs := mat.NewDense(n, n, nil)
-	lhs.Copy(AtA)
-	for i := 0; i < n; i++ {
-		lhs.Set(i, i, lhs.At(i, i)+rho)
-	}
 	var chol mat.Cholesky
-	if !chol.Factorize(mat.NewSymDense(n, lhs.RawMatrix().Data)) {
-		return nil, fmt.Errorf("admm: Cholesky factorization failed")
+	cholOK := false
+	for attempt := 0; attempt < 5; attempt++ {
+		lhs.Copy(AtA)
+		for i := 0; i < n; i++ {
+			lhs.Set(i, i, lhs.At(i, i)+rho)
+		}
+		if chol.Factorize(mat.NewSymDense(n, lhs.RawMatrix().Data)) {
+			cholOK = true
+			break
+		}
+		rho *= 10 // increase penalty to improve conditioning
+	}
+	if !cholOK {
+		return nil, fmt.Errorf("admm: Cholesky factorization failed after scaling rho to %.1e; matrix may be degenerate", rho)
 	}
 
 	// ADMM variables
