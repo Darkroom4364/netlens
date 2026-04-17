@@ -129,7 +129,9 @@ func Bootstrap(p *Problem, solver Solver, cfg BootstrapConfig) (*Solution, error
 			return nil
 		})
 	}
-	g.Wait()
+	if err := g.Wait(); err != nil {
+		return nil, fmt.Errorf("bootstrap: %w", err)
+	}
 
 	// Compute percentile-based CI per link.
 	confidence := make([]float64, n)
