@@ -25,7 +25,10 @@ func (s *LaplacianSolver) Solve(p *Problem) (*Solution, error) {
 	if p.Topo == nil {
 		return nil, fmt.Errorf("laplacian: topology required")
 	}
-	L := buildLinkLaplacian(p.Topo, n)
+	L, err := buildLinkLaplacian(p.Topo, n)
+	if err != nil {
+		return nil, err
+	}
 
 	lambda := s.Lambda
 	if lambda <= 0 {
@@ -118,9 +121,13 @@ func solveLaplacianAug(A *mat.Dense, b *mat.VecDense, L *mat.Dense, m, n int, la
 }
 
 // buildLinkLaplacian builds L = D - W for the link adjacency graph.
-func buildLinkLaplacian(topo Topology, n int) *mat.Dense {
+func buildLinkLaplacian(topo Topology, n int) (*mat.Dense, error) {
+	links := topo.Links()
+	if len(links) < n {
+		return nil, fmt.Errorf("laplacian: topology has %d links but routing matrix expects %d", len(links), n)
+	}
 	nodeLinks := make(map[int][]int)
-	for i, l := range topo.Links()[:n] {
+	for i, l := range links[:n] {
 		nodeLinks[l.Src] = append(nodeLinks[l.Src], i)
 		nodeLinks[l.Dst] = append(nodeLinks[l.Dst], i)
 	}
@@ -139,5 +146,10 @@ func buildLinkLaplacian(topo Topology, n int) *mat.Dense {
 		for j := 0; j < n; j++ { deg -= L.At(i, j) }
 		L.Set(i, i, deg)
 	}
-	return L
+	for i := 0; i < n; i++ {
+		if L.At(i, i) == 0 {
+			return nil, fmt.Errorf("laplacian: link %d is isolated (no shared nodes with other links); graph not connected", i)
+		}
+	}
+	return L, nil
 }
