@@ -82,20 +82,10 @@ func BuildProblemFromMeasurements(topo Topology, pathMeasurements []PathMeasurem
 	}
 
 	measurements := make([]float64, len(pathMeasurements))
-	weights := make([]float64, len(pathMeasurements))
 	for i, m := range pathMeasurements {
 		minRTT := m.MinRTT()
 		measurements[i] = float64(minRTT) / float64(time.Millisecond) // convert to ms
-		weights[i] = m.Weight
-		if weights[i] == 0 {
-			weights[i] = 1.0
-		}
 	}
 
-	p, err := BuildProblem(topo, pathSpecs, measurements)
-	if err != nil {
-		return nil, err
-	}
-	p.Weights = mat.NewVecDense(len(weights), weights)
-	return p, nil
+	return BuildProblem(topo, pathSpecs, measurements)
 }
