@@ -44,13 +44,13 @@ func (f *DOTFormatter) Format(w io.Writer, p *tomo.Problem, s *tomo.Solution) er
 		}
 
 		color := delayColor(delayMS)
-		style := "solid"
+		edgeStyle := "solid"
 		if !identifiable {
-			style = "dashed"
+			edgeStyle = "dashed"
 		}
 
 		if _, err := fmt.Fprintf(w, "  %d -- %d [label=\"%.1fms\" color=%q style=%q]\n",
-			link.Src, link.Dst, delayMS, color, style); err != nil {
+			link.Src, link.Dst, delayMS, color, edgeStyle); err != nil {
 			return err
 		}
 	}

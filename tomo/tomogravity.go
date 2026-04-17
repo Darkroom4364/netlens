@@ -62,18 +62,18 @@ func (s *TomogravitySolver) Solve(p *Problem) (*Solution, error) {
 	r := mat.NewVecDense(m, nil)
 	r.SubVec(p.B, Aprior)
 
-	// Step 3: Solve residual with Tikhonov via SVD.
-	var svd mat.SVD
-	if !svd.Factorize(p.A, mat.SVDFull) {
+	// Step 3: Solve residual with Tikhonov via SVD (cached on Problem).
+	svdPtr, ok := p.SVD()
+	if !ok {
 		return nil, fmt.Errorf("tomogravity: SVD factorization failed")
 	}
 
 	sv := make([]float64, min(m, n))
-	svd.Values(sv)
+	svdPtr.Values(sv)
 
 	var u, v mat.Dense
-	svd.UTo(&u)
-	svd.VTo(&v)
+	svdPtr.UTo(&u)
+	svdPtr.VTo(&v)
 
 	lambda := s.Lambda
 	if lambda <= 0 {

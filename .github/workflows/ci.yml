@@ -83,21 +83,8 @@ jobs:
 
   test-gate:
     name: test gate
-    needs: [changes, test]
     if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Pass if tests passed or were skipped
-        run: |
-          if [[ "${{ needs.test.result }}" == "success" || "${{ needs.test.result }}" == "skipped" ]]; then
-            exit 0
-          fi
-          exit 1
-
-  test-gate:
-    name: test gate
-    if: always()
-    needs: [test, lint]
+    needs: [changes, test, lint]
     runs-on: ubuntu-latest
     steps:
       - name: Check results

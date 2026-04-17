@@ -89,6 +89,30 @@ func TestBootstrapAbileneNoisy(t *testing.T) {
 	_ = math.Abs(0) // keep math imported
 }
 
+func TestBootstrapDeterminism(t *testing.T) {
+	groundTruth := []float64{5.0, 3.0, 7.0}
+	p := buildTriangleProblem(t, groundTruth)
+
+	cfg := tomo.BootstrapConfig{NumSamples: 50, Seed: 99}
+
+	sol1, err := tomo.Bootstrap(p, &tomo.NNLSSolver{}, cfg)
+	if err != nil {
+		t.Fatalf("Bootstrap run 1: %v", err)
+	}
+	sol2, err := tomo.Bootstrap(p, &tomo.NNLSSolver{}, cfg)
+	if err != nil {
+		t.Fatalf("Bootstrap run 2: %v", err)
+	}
+
+	for j := 0; j < p.NumLinks(); j++ {
+		c1 := sol1.Confidence.AtVec(j)
+		c2 := sol2.Confidence.AtVec(j)
+		if c1 != c2 {
+			t.Errorf("link %d: CI mismatch across runs: %.6f vs %.6f", j, c1, c2)
+		}
+	}
+}
+
 func TestBootstrapSingleSample(t *testing.T) {
 	groundTruth := []float64{5.0, 3.0, 7.0}
 	p := buildTriangleProblem(t, groundTruth)

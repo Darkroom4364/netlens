@@ -27,19 +27,19 @@ func (s *TikhonovSolver) Solve(p *Problem) (*Solution, error) {
 	start := time.Now()
 	_, n := p.A.Dims()
 
-	// Compute SVD for efficient Tikhonov solution
-	var svd mat.SVD
-	if !svd.Factorize(p.A, mat.SVDFull) {
+	// Use cached SVD of A (shared across Tikhonov, TSVD, Tomogravity).
+	svdPtr, ok := p.SVD()
+	if !ok {
 		return nil, fmt.Errorf("tikhonov: SVD factorization failed")
 	}
 
 	m, _ := p.A.Dims()
 	sv := make([]float64, min(m, n))
-	svd.Values(sv)
+	svdPtr.Values(sv)
 
 	var u, v mat.Dense
-	svd.UTo(&u)
-	svd.VTo(&v)
+	svdPtr.UTo(&u)
+	svdPtr.VTo(&v)
 
 	// Select lambda
 	lambda := s.Lambda

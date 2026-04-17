@@ -1,11 +1,14 @@
 package tomo
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
+	"runtime"
 	"sort"
 	"time"
 
+	"golang.org/x/sync/errgroup"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -23,6 +26,13 @@ func (c *BootstrapConfig) defaults() {
 	if c.Alpha <= 0 || c.Alpha >= 1 {
 		c.Alpha = 0.05
 	}
+}
+
+// bootstrapBuf holds pre-allocated buffers reused across bootstrap iterations.
+type bootstrapBuf struct {
+	indices []int
+	aData   []float64
+	bData   []float64
 }
 
 // Bootstrap runs bootstrap resampling and returns the original solution
@@ -46,40 +56,81 @@ func Bootstrap(p *Problem, solver Solver, cfg BootstrapConfig) (*Solution, error
 	}
 	rng := rand.New(rand.NewSource(seed))
 
+	// Pre-generate deterministic per-sample seeds so results are
+	// reproducible regardless of goroutine scheduling order.
+	seeds := make([]int64, cfg.NumSamples)
+	for b := range seeds {
+		seeds[b] = rng.Int63()
+	}
+
+	// Per-worker buffers, one per concurrent goroutine.
+	numWorkers := runtime.GOMAXPROCS(0)
+	if numWorkers > cfg.NumSamples {
+		numWorkers = cfg.NumSamples
+	}
+	bufs := make([]bootstrapBuf, numWorkers)
+	for i := range bufs {
+		bufs[i] = bootstrapBuf{
+			indices: make([]int, m),
+			aData:   make([]float64, m*n),
+			bData:   make([]float64, m),
+		}
+	}
+
+	// Slot channel ensures each goroutine gets its own buffer.
+	slots := make(chan int, numWorkers)
+	for i := 0; i < numWorkers; i++ {
+		slots <- i
+	}
+
 	// Collect bootstrap estimates: samples[b][j] = estimate for link j in iteration b.
 	samples := make([][]float64, cfg.NumSamples)
 
+	g, _ := errgroup.WithContext(context.Background())
+	g.SetLimit(numWorkers)
+
 	for b := 0; b < cfg.NumSamples; b++ {
-		// Resample row indices with replacement.
-		indices := make([]int, m)
-		for i := range indices {
-			indices[i] = rng.Intn(m)
-		}
+		g.Go(func() error {
+			wid := <-slots
+			defer func() { slots <- wid }()
+			buf := &bufs[wid]
 
-		// Build resampled A and b.
-		aData := make([]float64, m*n)
-		bData := make([]float64, m)
-		for i, idx := range indices {
-			for j := 0; j < n; j++ {
-				aData[i*n+j] = p.A.At(idx, j)
+			localRng := rand.New(rand.NewSource(seeds[b]))
+
+			// Resample row indices with replacement.
+			for i := range buf.indices {
+				buf.indices[i] = localRng.Intn(m)
 			}
-			bData[i] = p.B.AtVec(idx)
-		}
 
-		bp := &Problem{
-			A:       mat.NewDense(m, n, aData),
-			B:       mat.NewVecDense(m, bData),
-			Quality: AnalyzeQuality(mat.NewDense(m, n, aData)),
-		}
+			// Build resampled A and b into pre-allocated buffers.
+			for i, idx := range buf.indices {
+				for j := 0; j < n; j++ {
+					buf.aData[i*n+j] = p.A.At(idx, j)
+				}
+				buf.bData[i] = p.B.AtVec(idx)
+			}
 
-		bSol, err := solver.Solve(bp)
-		if err != nil {
-			continue // skip failed bootstrap samples
-		}
-		samples[b] = make([]float64, n)
-		for j := 0; j < n; j++ {
-			samples[b][j] = bSol.X.AtVec(j)
-		}
+			bp := &Problem{
+				A: mat.NewDense(m, n, buf.aData),
+				B: mat.NewVecDense(m, buf.bData),
+				// Quality intentionally nil: bootstrap only needs X,
+				// and skipping AnalyzeQuality avoids a full SVD per sample.
+			}
+
+			bSol, err := solver.Solve(bp)
+			if err != nil {
+				return nil // skip failed bootstrap samples
+			}
+			row := make([]float64, n)
+			for j := 0; j < n; j++ {
+				row[j] = bSol.X.AtVec(j)
+			}
+			samples[b] = row
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, fmt.Errorf("bootstrap: %w", err)
 	}
 
 	// Compute percentile-based CI per link.
