@@ -52,6 +52,17 @@ func (s *VardiEMSolver) Solve(p *Problem) (*Solution, error) {
 		}
 	}
 
+	// Reject degenerate input where too few paths have links.
+	var emptyPaths int
+	for i := 0; i < m; i++ {
+		if len(pathLinks[i]) == 0 {
+			emptyPaths++
+		}
+	}
+	if m-emptyPaths < 2 {
+		return nil, fmt.Errorf("vardi-em: only %d usable paths (need ≥2); %d paths had no links", m-emptyPaths, emptyPaths)
+	}
+
 	// Initialize x_j = 1.0 (uniform positive)
 	x := make([]float64, n)
 	for j := range x {
@@ -61,12 +72,14 @@ func (s *VardiEMSolver) Solve(p *Problem) (*Solution, error) {
 	xNew := make([]float64, n)
 	count := make([]float64, n)
 
+	var skippedZeroDenom int
 	var iter int
 	for iter = 0; iter < maxIter; iter++ {
 		for j := range xNew {
 			xNew[j] = 0
 			count[j] = 0
 		}
+		skippedZeroDenom = 0
 
 		// E-step: for each path i, distribute b_i to links proportionally
 		for i := 0; i < m; i++ {
@@ -81,6 +94,7 @@ func (s *VardiEMSolver) Solve(p *Problem) (*Solution, error) {
 				denom += p.A.At(i, j) * x[j]
 			}
 			if denom <= 0 {
+				skippedZeroDenom++
 				continue
 			}
 			for _, j := range links {
@@ -117,7 +131,9 @@ func (s *VardiEMSolver) Solve(p *Problem) (*Solution, error) {
 
 	xVec := mat.NewVecDense(n, x)
 	return newSolution(p, xVec, "vardi-em", start, map[string]any{
-		"iterations": iter,
-		"tolerance":  tol,
+		"iterations":         iter,
+		"tolerance":          tol,
+		"skipped_empty":      emptyPaths,
+		"skipped_zero_denom": skippedZeroDenom,
 	}), nil
 }
