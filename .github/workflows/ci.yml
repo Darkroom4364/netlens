@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ['1.23', '1.24']
+        go-version: ['1.25', '1.26']
 
     steps:
       - uses: actions/checkout@v4
@@ -89,7 +89,7 @@ jobs:
     steps:
       - name: Check results
         run: |
-          if [[ "${{ needs.test.result }}" == "failure" || "${{ needs.lint.result }}" == "failure" ]]; then
+          if [[ "${{ needs.changes.result }}" == "failure" || "${{ needs.test.result }}" == "failure" || "${{ needs.lint.result }}" == "failure" ]]; then
             echo "One or more required jobs failed"
             exit 1
           fi
