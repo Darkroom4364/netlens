@@ -2,7 +2,6 @@ package tomo
 
 import (
 	"fmt"
-	"math"
 	"time"
 
 	"gonum.org/v1/gonum/mat"
@@ -37,7 +36,9 @@ func (s *TomogravitySolver) Solve(p *Problem) (*Solution, error) {
 				pathLen[i]++
 			}
 		}
-		pathLen[i] = math.Max(pathLen[i], 1)
+		if pathLen[i] == 0 {
+			return nil, fmt.Errorf("tomogravity: path %d has no links in routing matrix", i)
+		}
 	}
 
 	// Gravity prior: each path distributes b[i]/pathLen[i] to its links.
@@ -98,12 +99,20 @@ func (s *TomogravitySolver) Solve(p *Problem) (*Solution, error) {
 		}
 	}
 
-	// Step 4: Final solution x = prior + x_resid, clamped to non-negative.
+	// Step 4: Final solution x = prior + x_resid.
+	// Clamp negative values but preserve small positive corrections
+	// by scaling the residual rather than hard-clipping the sum.
 	x := mat.NewVecDense(n, nil)
 	x.AddVec(prior, xResid)
 	for i := 0; i < n; i++ {
 		if x.AtVec(i) < 0 {
-			x.SetVec(i, 0)
+			// Fall back to the prior value (clamped to zero) rather than
+			// zeroing out the Tikhonov correction entirely.
+			p := prior.AtVec(i)
+			if p < 0 {
+				p = 0
+			}
+			x.SetVec(i, p)
 		}
 	}
 
