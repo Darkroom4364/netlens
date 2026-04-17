@@ -14,8 +14,7 @@ type Problem struct {
 	Topo    Topology
 	A       *mat.Dense    // Routing matrix (m paths × n links)
 	B       *mat.VecDense // End-to-end measurements (m × 1)
-	Weights *mat.VecDense // Per-measurement weights (m × 1), nil = uniform
-	Paths   []PathSpec
+	Paths []PathSpec
 	Links   []Link
 	Quality *MatrixQuality // Computed during construction
 
