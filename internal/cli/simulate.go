@@ -79,18 +79,7 @@ the known ground truth.`,
 				return fmt.Errorf("solve: %w", err)
 			}
 
-			// Warn about negative delay estimates (skip for NNLS which guarantees non-negativity)
-			if method != "nnls" {
-				negCount := 0
-				for i := 0; i < sol.X.Len(); i++ {
-					if sol.X.AtVec(i) < 0 {
-						negCount++
-					}
-				}
-				if negCount > 0 {
-					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: %d links have negative delay estimates (physically impossible). Consider using --method nnls to enforce non-negativity.\n", negCount)
-				}
-			}
+			warnNegativeDelays(cmd, sol, method)
 
 			// Print results
 			topoName := filepath.Base(topoFile)
@@ -186,6 +175,22 @@ the known ground truth.`,
 	_ = cmd.MarkFlagRequired("topology")
 
 	return cmd
+}
+
+// warnNegativeDelays prints a warning to stderr if the solution contains negative estimates.
+func warnNegativeDelays(cmd *cobra.Command, sol *tomo.Solution, method string) {
+	if method == "nnls" {
+		return
+	}
+	negCount := 0
+	for i := 0; i < sol.X.Len(); i++ {
+		if sol.X.AtVec(i) < 0 {
+			negCount++
+		}
+	}
+	if negCount > 0 {
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: %d links have negative delay estimates (physically impossible). Consider using --method nnls to enforce non-negativity.\n", negCount)
+	}
 }
 
 func getSolver(name string) (tomo.Solver, error) {
