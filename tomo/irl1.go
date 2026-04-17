@@ -87,7 +87,9 @@ func (s *IRL1Solver) Solve(p *Problem) (*Solution, error) {
 
 	zOld := mat.NewVecDense(n, nil)
 	totalIters := 0
+	outerUsed := 0
 	for outer := 0; outer < outerIter; outer++ {
+		outerUsed = outer + 1
 		for k := 0; k < innerIter; k++ {
 			totalIters++
 			// x-update
@@ -120,14 +122,22 @@ func (s *IRL1Solver) Solve(p *Problem) (*Solution, error) {
 				break
 			}
 		}
-		// Reweight
+		// Reweight and check convergence
+		maxWeightChange := 0.0
 		for i := 0; i < n; i++ {
-			w[i] = 1.0 / (math.Abs(z.AtVec(i)) + eps)
+			wNew := 1.0 / (math.Abs(z.AtVec(i)) + eps)
+			if d := math.Abs(wNew - w[i]); d > maxWeightChange {
+				maxWeightChange = d
+			}
+			w[i] = wNew
+		}
+		if maxWeightChange < 1e-6 {
+			break
 		}
 	}
 
 	return newSolution(p, x, "irl1", start, map[string]any{
-		"outer_iterations": outerIter, "total_iterations": totalIters,
+		"outer_iterations": outerUsed, "total_iterations": totalIters,
 		"lambda": lambda, "rho": rho, "epsilon": eps,
 	}), nil
 }
