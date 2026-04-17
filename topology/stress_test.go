@@ -2,7 +2,6 @@ package topology
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -143,15 +142,10 @@ func TestStress_AllPairsShortestPaths1000Nodes(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping stress test")
 	}
-	if os.Getenv("NETLENS_STRESS") == "" {
-		t.Skip("skipping stress test; set NETLENS_STRESS=1 to enable")
-	}
 
-	// Use 300 nodes / 900 links — AllPairsShortestPaths runs individual
-	// Dijkstra per source, so O(V^2 * (V+E)). 1000 nodes exceeds 60s.
-	g := BarabasiAlbert(300, 3, 42)
-	if g.NumNodes() != 300 {
-		t.Fatalf("expected 300 nodes, got %d", g.NumNodes())
+	g := BarabasiAlbert(1000, 3, 42)
+	if g.NumNodes() != 1000 {
+		t.Fatalf("expected 1000 nodes, got %d", g.NumNodes())
 	}
 
 	start := time.Now()

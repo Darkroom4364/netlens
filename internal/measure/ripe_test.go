@@ -113,8 +113,8 @@ func newMockServer(t *testing.T) *httptest.Server {
 			_, _ = fmt.Fprint(w, mockSearchResults)
 
 		case r.URL.Path == "/measurements/99999/results/":
+			w.Header().Set("Retry-After", "0")
 			w.WriteHeader(http.StatusTooManyRequests)
-			w.Header().Set("Retry-After", "1")
 			_, _ = fmt.Fprint(w, `{"error": "rate limited"}`)
 
 		default:

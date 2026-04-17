@@ -1,6 +1,7 @@
 package tomo
 
 import (
+	"sync"
 	"time"
 
 	"gonum.org/v1/gonum/mat"
@@ -8,6 +9,7 @@ import (
 
 // Problem represents a network tomography inverse problem: y = Ax + e
 // where A is the routing matrix, x is per-link metrics, y is end-to-end measurements.
+// A Problem must not be copied after construction (contains sync.Once).
 type Problem struct {
 	Topo    Topology
 	A       *mat.Dense    // Routing matrix (m paths × n links)
@@ -16,6 +18,20 @@ type Problem struct {
 	Paths   []PathSpec
 	Links   []Link
 	Quality *MatrixQuality // Computed during construction
+
+	svdOnce sync.Once // guards lazy SVD computation
+	svdFull *mat.SVD  // cached full SVD of A
+	svdOK   bool      // whether Factorize succeeded
+}
+
+// SVD returns the cached full SVD of A, computing it on first call.
+// Thread-safe via sync.Once.
+func (p *Problem) SVD() (*mat.SVD, bool) {
+	p.svdOnce.Do(func() {
+		p.svdFull = &mat.SVD{}
+		p.svdOK = p.svdFull.Factorize(p.A, mat.SVDFull)
+	})
+	return p.svdFull, p.svdOK
 }
 
 // NumPaths returns the number of measurement paths (rows of A).
@@ -64,6 +80,8 @@ type Solution struct {
 }
 
 // Solver is the interface all inference methods implement.
+// Implementations must be safe for concurrent Solve calls;
+// Solve must not mutate receiver state.
 type Solver interface {
 	Name() string
 	Solve(p *Problem) (*Solution, error)

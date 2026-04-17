@@ -153,24 +153,48 @@ func (g *Graph) shortestPathLocked(src, dst int) ([]int, bool) {
 }
 
 // AllPairsShortestPaths returns path specs for all reachable (src, dst) pairs.
+// Uses gonum's DijkstraAllPaths for O(|V|·|E| + |V|²·log|V|) instead of
+// per-pair Dijkstra which was O(|V|²·(|V|+|E|)).
 func (g *Graph) AllPairsShortestPaths() []tomo.PathSpec {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
-	var paths []tomo.PathSpec
+
+	ap := path.DijkstraAllPaths(g.g)
+
 	nodeIDs := make([]int, len(g.nodes))
 	for i, n := range g.nodes {
 		nodeIDs[i] = n.ID
 	}
 
+	var paths []tomo.PathSpec
 	for i, src := range nodeIDs {
 		for _, dst := range nodeIDs[i+1:] {
-			if linkIDs, ok := g.shortestPathLocked(src, dst); ok {
-				paths = append(paths, tomo.PathSpec{
-					Src:     src,
-					Dst:     dst,
-					LinkIDs: linkIDs,
-				})
+			nodes, _, _ := ap.Between(int64(src), int64(dst))
+			if len(nodes) < 2 {
+				continue
 			}
+
+			linkIDs := make([]int, 0, len(nodes)-1)
+			ok := true
+			for j := 0; j < len(nodes)-1; j++ {
+				a := int(nodes[j].ID())
+				b := int(nodes[j+1].ID())
+				idx := g.linkIndexLocked(a, b)
+				if idx < 0 {
+					ok = false
+					break
+				}
+				linkIDs = append(linkIDs, idx)
+			}
+			if !ok {
+				continue
+			}
+
+			paths = append(paths, tomo.PathSpec{
+				Src:     src,
+				Dst:     dst,
+				LinkIDs: linkIDs,
+			})
 		}
 	}
 	return paths
