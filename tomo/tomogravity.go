@@ -82,9 +82,10 @@ func (s *TomogravitySolver) Solve(p *Problem) (*Solution, error) {
 
 	// Tikhonov on residual: x_resid = V * diag(f_j * (uᵀr)/σ_j) where f_j = σ_j²/(σ_j²+λ)
 	xResid := mat.NewVecDense(n, nil)
+	svThresh := sv[0] * svdTolerance
 	for j := 0; j < len(sv); j++ {
 		sj := sv[j]
-		if sj < 1e-15 {
+		if sj < svThresh {
 			continue
 		}
 		filter := sj * sj / (sj*sj + lambda)

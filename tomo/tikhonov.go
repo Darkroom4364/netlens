@@ -54,9 +54,10 @@ func (s *TikhonovSolver) Solve(p *Problem) (*Solution, error) {
 	// Tikhonov solution via SVD:
 	// x = Σ_j (σ_j / (σ_j² + λ)) * (u_j · b) * v_j
 	x := mat.NewVecDense(n, nil)
+	svThresh := sv[0] * svdTolerance
 	for j := 0; j < len(sv); j++ {
 		sj := sv[j]
-		if sj < 1e-15 {
+		if sj < svThresh {
 			continue
 		}
 		// Filter factor: f_j = σ_j² / (σ_j² + λ)

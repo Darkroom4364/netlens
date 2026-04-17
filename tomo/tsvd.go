@@ -2,7 +2,6 @@ package tomo
 
 import (
 	"fmt"
-	"math"
 	"time"
 
 	"gonum.org/v1/gonum/mat"
@@ -43,8 +42,9 @@ func (s *TSVDSolver) Solve(p *Problem) (*Solution, error) {
 	// where only the first k singular components are used
 	x := mat.NewVecDense(n, nil)
 
+	svThresh := sv[0] * svdTolerance
 	for j := 0; j < k; j++ {
-		if sv[j] < 1e-15 {
+		if sv[j] < svThresh {
 			continue
 		}
 		// Compute u_j^T * b
@@ -76,7 +76,7 @@ func (s *TSVDSolver) truncationRank(sv []float64, b *mat.VecDense, u *mat.Dense,
 	// Estimate noise as the smallest singular values' contribution.
 	// Heuristic: keep components where sigma_j > sigma_max * sqrt(eps) * max(m,n)
 	maxSV := sv[0]
-	threshold := maxSV * math.Sqrt(1e-15) * float64(max(m, n))
+	threshold := maxSV * svdTolerance * float64(max(m, n))
 
 	k := 0
 	for _, s := range sv {
