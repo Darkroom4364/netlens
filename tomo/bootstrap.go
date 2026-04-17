@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"runtime"
 	"sort"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -84,6 +85,7 @@ func Bootstrap(p *Problem, solver Solver, cfg BootstrapConfig) (*Solution, error
 	}
 
 	// Collect bootstrap estimates: samples[b][j] = estimate for link j in iteration b.
+	var failedSamples atomic.Int64
 	samples := make([][]float64, cfg.NumSamples)
 
 	g, _ := errgroup.WithContext(context.Background())
@@ -122,7 +124,8 @@ func Bootstrap(p *Problem, solver Solver, cfg BootstrapConfig) (*Solution, error
 
 			bSol, err := solver.Solve(bp)
 			if err != nil {
-				return nil // skip failed bootstrap samples
+				failedSamples.Add(1)
+				return nil
 			}
 			row := make([]float64, n)
 			for j := 0; j < n; j++ {
@@ -134,6 +137,11 @@ func Bootstrap(p *Problem, solver Solver, cfg BootstrapConfig) (*Solution, error
 	}
 	if err := g.Wait(); err != nil {
 		return nil, fmt.Errorf("bootstrap: %w", err)
+	}
+
+	failed := int(failedSamples.Load())
+	if failed > cfg.NumSamples/2 {
+		return nil, fmt.Errorf("bootstrap: %d/%d samples failed (>50%%); confidence intervals unreliable", failed, cfg.NumSamples)
 	}
 
 	// Compute percentile-based CI per link.
@@ -159,6 +167,11 @@ func Bootstrap(p *Problem, solver Solver, cfg BootstrapConfig) (*Solution, error
 	}
 
 	sol.Confidence = mat.NewVecDense(n, confidence)
+	if sol.Metadata == nil {
+		sol.Metadata = make(map[string]any)
+	}
+	sol.Metadata["bootstrap_samples"] = cfg.NumSamples
+	sol.Metadata["bootstrap_failed"] = failed
 	return sol, nil
 }
 
