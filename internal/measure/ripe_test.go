@@ -336,9 +336,9 @@ func TestParseRetryAfter(t *testing.T) {
 		{"3", 3 * time.Second},
 	}
 	for _, tc := range tests {
-		got := parseRetryAfter(tc.input)
+		got := parseRetryAfterHeader(tc.input)
 		if got != tc.want {
-			t.Errorf("parseRetryAfter(%q) = %v, want %v", tc.input, got, tc.want)
+			t.Errorf("parseRetryAfterHeader(%q) = %v, want %v", tc.input, got, tc.want)
 		}
 	}
 }

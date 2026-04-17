@@ -94,6 +94,19 @@ jobs:
           fi
           exit 1
 
+  test-gate:
+    name: test gate
+    if: always()
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        run: |
+          if [[ "${{ needs.test.result }}" == "failure" || "${{ needs.lint.result }}" == "failure" ]]; then
+            echo "One or more required jobs failed"
+            exit 1
+          fi
+
   lint:
     runs-on: ubuntu-latest
     steps:

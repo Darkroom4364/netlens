@@ -9,6 +9,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/Darkroom4364/netlens/internal/style"
 	"github.com/Darkroom4364/netlens/tomo"
 )
 
@@ -74,14 +75,14 @@ func RenderDetailBar(p *tomo.Problem, s *tomo.Solution, linkIdx int, w int) stri
 	}
 
 	line := fmt.Sprintf("%s  %.2fms ±%.2f  σ=%.1f  paths=%d  ident=%s", name, delay, conf, sigma, paths, ident)
-	if delay > 20 {
+	if delay > style.DelayCongestionMS {
 		line += "  " + alertStyle.Render("⚠ CONGESTED")
 	}
 	return detailStyle.Width(w - 2).Render(line)
 }
 
 // RenderStatusBar renders the bottom status line.
-func RenderStatusBar(p *tomo.Problem, s *tomo.Solution, mode viewMode, solver string, filtering bool, filterText string, sortMode int, w int) string {
+func RenderStatusBar(p *tomo.Problem, s *tomo.Solution, mode viewMode, solver string, filtering bool, filterText string, sortMode int, solveErr string, w int) string {
 	hint := "[h]heatmap"
 	if mode == viewHeatmap {
 		hint = "[t]tree"
@@ -98,6 +99,9 @@ func RenderStatusBar(p *tomo.Problem, s *tomo.Solution, mode viewMode, solver st
 	left := fmt.Sprintf(" %s [/]filter [s]sort:%s [m]solver [?]help [q]quit  solver=%s", hint, sortLabel, solver)
 	if filtering {
 		left = fmt.Sprintf(" FILTER: %s█  (Enter=apply  Esc=cancel)", filterText)
+	}
+	if solveErr != "" {
+		left = " " + alertStyle.Render("solve error: "+solveErr)
 	}
 	rank := 0
 	if p.Quality != nil {

@@ -42,7 +42,7 @@ func (c *RetryableClient) Get(ctx context.Context, url string, authHeader string
 			if attempt == c.MaxRetries {
 				return nil, fmt.Errorf("rate limited after %d retries (GET %s)", c.MaxRetries, url)
 			}
-			wait := time.Duration(ParseRetryAfter(resp)) * time.Second
+			wait := parseRetryAfterHeader(resp.Header.Get("Retry-After"))
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()
@@ -51,30 +51,33 @@ func (c *RetryableClient) Get(ctx context.Context, url string, authHeader string
 			}
 		}
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			return nil, fmt.Errorf("HTTP %d from %s: %s", resp.StatusCode, url, TruncateBody(string(body), 200))
+			return nil, fmt.Errorf("HTTP %d from %s: %s", resp.StatusCode, url, truncateBody(body, 200))
 		}
 		return body, nil
 	}
 	return nil, fmt.Errorf("exhausted retries for %s", url)
 }
 
-// ParseRetryAfter extracts seconds from Retry-After header. Returns 1 on parse failure.
-func ParseRetryAfter(resp *http.Response) int {
-	val := resp.Header.Get("Retry-After")
+// parseRetryAfterHeader parses the Retry-After header value (seconds).
+// Falls back to 5 seconds if the header is missing or unparseable.
+func parseRetryAfterHeader(val string) time.Duration {
 	if val == "" {
-		return 1
+		return 5 * time.Second
 	}
 	secs, err := strconv.Atoi(val)
-	if err != nil || secs <= 0 {
-		return 1
+	if err != nil || secs < 0 {
+		return 5 * time.Second
 	}
-	return secs
+	if secs == 0 {
+		return 100 * time.Millisecond
+	}
+	return time.Duration(secs) * time.Second
 }
 
-// TruncateBody returns the first maxLen bytes of body for error messages.
-func TruncateBody(body string, maxLen int) string {
-	if len(body) <= maxLen {
-		return body
+// truncateBody returns a string of at most n bytes from body, for error messages.
+func truncateBody(body []byte, n int) string {
+	if len(body) <= n {
+		return string(body)
 	}
-	return body[:maxLen] + "..."
+	return string(body[:n]) + "..."
 }

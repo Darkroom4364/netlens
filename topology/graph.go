@@ -79,11 +79,23 @@ func (g *Graph) NumNodes() int { g.mu.RLock(); defer g.mu.RUnlock(); return len(
 // NumLinks returns the number of links.
 func (g *Graph) NumLinks() int { g.mu.RLock(); defer g.mu.RUnlock(); return len(g.links) }
 
-// Links returns all links.
-func (g *Graph) Links() []tomo.Link { g.mu.RLock(); defer g.mu.RUnlock(); return g.links }
+// Links returns a copy of all links.
+func (g *Graph) Links() []tomo.Link {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	out := make([]tomo.Link, len(g.links))
+	copy(out, g.links)
+	return out
+}
 
-// Nodes returns all nodes.
-func (g *Graph) Nodes() []tomo.Node { g.mu.RLock(); defer g.mu.RUnlock(); return g.nodes }
+// Nodes returns a copy of all nodes.
+func (g *Graph) Nodes() []tomo.Node {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	out := make([]tomo.Node, len(g.nodes))
+	copy(out, g.nodes)
+	return out
+}
 
 // Neighbors returns node IDs adjacent to the given node.
 func (g *Graph) Neighbors(nodeID int) []int {

@@ -58,10 +58,15 @@ func (s *VardiEMSolver) Solve(p *Problem) (*Solution, error) {
 		x[j] = 1.0
 	}
 
+	xNew := make([]float64, n)
+	count := make([]float64, n)
+
 	var iter int
 	for iter = 0; iter < maxIter; iter++ {
-		xNew := make([]float64, n)
-		count := make([]float64, n) // number of contributions per link
+		for j := range xNew {
+			xNew[j] = 0
+			count[j] = 0
+		}
 
 		// E-step: for each path i, distribute b_i to links proportionally
 		for i := 0; i < m; i++ {
@@ -103,7 +108,7 @@ func (s *VardiEMSolver) Solve(p *Problem) (*Solution, error) {
 			}
 		}
 
-		x = xNew
+		copy(x, xNew)
 		if maxRel < tol {
 			iter++
 			break
@@ -111,24 +116,8 @@ func (s *VardiEMSolver) Solve(p *Problem) (*Solution, error) {
 	}
 
 	xVec := mat.NewVecDense(n, x)
-	residual := computeResidual(p.A, xVec, p.B)
-
-	identifiable := make([]bool, n)
-	if p.Quality != nil {
-		for i := range identifiable {
-			identifiable[i] = p.Quality.IsIdentifiable(i)
-		}
-	}
-
-	return &Solution{
-		X:            xVec,
-		Identifiable: identifiable,
-		Residual:     residual,
-		Method:       "vardi-em",
-		Duration:     time.Since(start),
-		Metadata: map[string]any{
-			"iterations": iter,
-			"tolerance":  tol,
-		},
-	}, nil
+	return newSolution(p, xVec, "vardi-em", start, map[string]any{
+		"iterations": iter,
+		"tolerance":  tol,
+	}), nil
 }

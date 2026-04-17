@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Darkroom4364/netlens/internal/style"
 	"github.com/Darkroom4364/netlens/internal/tui/styles"
 	"github.com/Darkroom4364/netlens/tomo"
 )
@@ -108,7 +109,7 @@ func RenderTreeView(p *tomo.Problem, s *tomo.Solution, selected int, expanded ma
 	// Summary.
 	congested := 0
 	for i := 0; i < s.X.Len(); i++ {
-		if s.X.AtVec(i) > 20 {
+		if s.X.AtVec(i) > style.DelayCongestionMS {
 			congested++
 		}
 	}
@@ -180,9 +181,9 @@ func RenderTreeView(p *tomo.Problem, s *tomo.Solution, selected int, expanded ma
 			bar := strings.Repeat("█", filled) + strings.Repeat("░", barW-filled)
 			delayStr := fmt.Sprintf("%.1fms", delay)
 			switch {
-			case delay > 20:
+			case delay > style.DelayCongestionMS:
 				delayStr = styles.Red.Render(delayStr) + " ⚠"
-			case delay >= 5:
+			case delay >= style.DelayMediumMS:
 				delayStr = styles.Yellow.Render(delayStr)
 			default:
 				delayStr = styles.Green.Render(delayStr)
