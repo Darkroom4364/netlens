@@ -90,6 +90,7 @@ func Bootstrap(p *Problem, solver Solver, cfg BootstrapConfig) (*Solution, error
 	g.SetLimit(numWorkers)
 
 	for b := 0; b < cfg.NumSamples; b++ {
+		b := b // capture per-iteration value for goroutine closure
 		g.Go(func() error {
 			wid := <-slots
 			defer func() { slots <- wid }()
@@ -110,6 +111,8 @@ func Bootstrap(p *Problem, solver Solver, cfg BootstrapConfig) (*Solution, error
 				buf.bData[i] = p.B.AtVec(idx)
 			}
 
+			// buf.aData/bData are aliased into the matrices below; safe because
+			// the goroutine holds the slot exclusively until Solve returns.
 			bp := &Problem{
 				A: mat.NewDense(m, n, buf.aData),
 				B: mat.NewVecDense(m, buf.bData),

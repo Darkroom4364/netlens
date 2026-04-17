@@ -9,6 +9,7 @@ import (
 
 // Problem represents a network tomography inverse problem: y = Ax + e
 // where A is the routing matrix, x is per-link metrics, y is end-to-end measurements.
+// A Problem must not be copied after construction (contains sync.Once).
 type Problem struct {
 	Topo    Topology
 	A       *mat.Dense    // Routing matrix (m paths × n links)
