@@ -2,6 +2,7 @@ package tomo
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"gonum.org/v1/gonum/mat"
@@ -42,7 +43,7 @@ func (s *TSVDSolver) Solve(p *Problem) (*Solution, error) {
 	// where only the first k singular components are used
 	x := mat.NewVecDense(n, nil)
 
-	svThresh := sv[0] * svdTolerance
+	svThresh := math.Max(sv[0]*svdTolerance*float64(max(m, n)), 1e-300)
 	for j := 0; j < k; j++ {
 		if sv[j] < svThresh {
 			continue

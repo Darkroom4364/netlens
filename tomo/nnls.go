@@ -50,9 +50,6 @@ func lawsonHanson(A *mat.Dense, b *mat.VecDense, n, m, maxIter int) (*mat.VecDen
 	// Z = zero set (indices where x = 0, constrained)
 	passive := make([]bool, n) // passive[j] = true means j is in P
 
-	// nnlsZeroTol is the near-zero tolerance for gradient and solution checks.
-	const nnlsZeroTol = 1e-15
-
 	At := A.T()
 
 	// w = Aᵀ(b - Ax), the negative gradient
