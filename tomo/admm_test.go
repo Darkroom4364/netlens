@@ -6,6 +6,7 @@ import (
 
 	"github.com/Darkroom4364/netlens/tomo"
 	"github.com/Darkroom4364/netlens/topology"
+	"gonum.org/v1/gonum/mat"
 )
 
 func TestADMMTriangle(t *testing.T) {
@@ -110,6 +111,30 @@ func TestADMMSparsity(t *testing.T) {
 	for _, i := range []int{0, 1, 3, 4} {
 		if math.Abs(sol.X.AtVec(i)) > 1.0 {
 			t.Errorf("link %d: got %.3f, want ~0.0", i, sol.X.AtVec(i))
+		}
+	}
+}
+
+func TestADMMCholeskyRetry(t *testing.T) {
+	// Underdetermined system (2 measurements, 5 links) so AᵀA is rank-deficient,
+	// forcing the Cholesky retry loop to bump rho for stability.
+	A := mat.NewDense(2, 5, []float64{
+		1, 1, 0, 0, 0,
+		0, 0, 1, 1, 1,
+	})
+	b := mat.NewVecDense(2, []float64{3.0, 6.0})
+
+	p := &tomo.Problem{A: A, B: b}
+	solver := &tomo.ADMMSolver{}
+	sol, err := solver.Solve(p)
+	if err != nil {
+		t.Fatalf("Solve should succeed with Cholesky retry: %v", err)
+	}
+
+	for i := 0; i < 5; i++ {
+		v := sol.X.AtVec(i)
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			t.Errorf("link %d: got %v, want finite value", i, v)
 		}
 	}
 }
