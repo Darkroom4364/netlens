@@ -67,7 +67,7 @@ func lawsonHanson(A *mat.Dense, b *mat.VecDense, n, m, maxIter int) (*mat.VecDen
 		}
 
 		// If max w ≤ 0, all zero-set gradients are non-positive → optimal
-		if maxW <= 1e-15 || maxJ < 0 {
+		if maxW <= nnlsZeroTol || maxJ < 0 {
 			break
 		}
 
@@ -82,7 +82,7 @@ func lawsonHanson(A *mat.Dense, b *mat.VecDense, n, m, maxIter int) (*mat.VecDen
 			// Check if all z_P ≥ 0
 			allNonNeg := true
 			for j := 0; j < n; j++ {
-				if passive[j] && z.AtVec(j) < -1e-15 {
+				if passive[j] && z.AtVec(j) < -nnlsZeroTol {
 					allNonNeg = false
 					break
 				}
@@ -102,7 +102,7 @@ func lawsonHanson(A *mat.Dense, b *mat.VecDense, n, m, maxIter int) (*mat.VecDen
 			alpha := 1.0
 			moveToZero := -1
 			for j := 0; j < n; j++ {
-				if passive[j] && z.AtVec(j) < -1e-15 {
+				if passive[j] && z.AtVec(j) < -nnlsZeroTol {
 					ratio := x.AtVec(j) / (x.AtVec(j) - z.AtVec(j))
 					if ratio < alpha {
 						alpha = ratio
@@ -120,7 +120,7 @@ func lawsonHanson(A *mat.Dense, b *mat.VecDense, n, m, maxIter int) (*mat.VecDen
 
 			// Move indices with x[j] ≈ 0 from P to Z
 			for j := 0; j < n; j++ {
-				if passive[j] && x.AtVec(j) < 1e-15 {
+				if passive[j] && x.AtVec(j) < nnlsZeroTol {
 					passive[j] = false
 					x.SetVec(j, 0)
 				}

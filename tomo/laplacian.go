@@ -107,8 +107,9 @@ func solveLaplacianAug(A *mat.Dense, b *mat.VecDense, L *mat.Dense, m, n int, la
 	svd.UTo(&u)
 	svd.VTo(&v)
 	x := mat.NewVecDense(n, nil)
+	svThresh := math.Max(sv[0]*svdTolerance, 1e-300)
 	for j := range sv {
-		if sv[j] < 1e-15 {
+		if sv[j] < svThresh {
 			continue
 		}
 		col := u.ColView(j)

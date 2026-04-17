@@ -8,6 +8,9 @@ import (
 
 const svdTolerance = 1e-10
 
+// nnlsZeroTol is the near-zero tolerance for gradient and solution checks.
+const nnlsZeroTol = 1e-15
+
 // AnalyzeQuality computes the identifiability and conditioning of routing matrix A.
 func AnalyzeQuality(A *mat.Dense) *MatrixQuality {
 	m, n := A.Dims()
