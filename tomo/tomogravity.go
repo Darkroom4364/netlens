@@ -2,6 +2,7 @@ package tomo
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"gonum.org/v1/gonum/mat"

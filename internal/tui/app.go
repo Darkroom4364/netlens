@@ -3,6 +3,7 @@
 package tui
 
 import (
+	"context"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -44,9 +45,24 @@ type Model struct {
 	filterText  string
 	sortMode    int
 	solveErr    string
+
+	// Wizard state.
+	phase        appPhase
+	source       dataSource
+	wizCursor    int
+	topoChoice   int
+	msmIDInput   string
+	filePathInput string
+	inputActive  bool
+	loadingMsg   string
+	spinnerFrame int
+	loadErr      string
+	loadLogs     []string
+	cancelLoad   context.CancelFunc
+	progCh       <-chan string
 }
 
-// New creates a new TUI model with a list of available solvers.
+// New creates a new TUI model that starts directly in the dashboard.
 func New(p *tomo.Problem, s *tomo.Solution, solvers []tomo.Solver, solverIdx int) Model {
 	return Model{
 		problem:   p,
@@ -54,6 +70,15 @@ func New(p *tomo.Problem, s *tomo.Solution, solvers []tomo.Solver, solverIdx int
 		solvers:   solvers,
 		solverIdx: solverIdx,
 		expanded:  make(map[int]bool),
+		phase:     phaseDashboard,
+	}
+}
+
+// NewWizard creates a TUI model that starts with the interactive wizard.
+func NewWizard() Model {
+	return Model{
+		phase:    phaseSourceSelect,
+		expanded: make(map[int]bool),
 	}
 }
 
@@ -84,6 +109,32 @@ func (m Model) currentSolver() tomo.Solver {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// Handle window size for all phases.
+	if ws, ok := msg.(tea.WindowSizeMsg); ok {
+		m.width = ws.Width
+		m.height = ws.Height
+		return m, nil
+	}
+
+	switch m.phase {
+	case phaseSourceSelect:
+		m, cmd := m.updateSourceSelect(msg)
+		return m, cmd
+	case phaseSourceConfig:
+		m, cmd := m.updateSourceConfig(msg)
+		return m, cmd
+	case phaseSolverSelect:
+		m, cmd := m.updateSolverSelect(msg)
+		return m, cmd
+	case phaseLoading:
+		m, cmd := m.updateLoading(msg)
+		return m, cmd
+	default:
+		return m.updateDashboard(msg)
+	}
+}
+
+func (m Model) updateDashboard(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		// In filter mode, capture text input.
@@ -130,6 +181,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.mode = viewHeatmap
 		case "t":
 			m.mode = viewTree
+		case "tab":
+			m.mode = (m.mode + 1) % 2
 		case "/":
 			m.filtering = true
 		case "s":
@@ -152,9 +205,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "esc":
 			m.showHelp = false
 		}
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
 	case solveResultMsg:
 		if msg.err != nil {
 			m.solveErr = msg.err.Error()
@@ -182,14 +232,30 @@ func (m Model) View() string {
 		return "loading..."
 	}
 
+	switch m.phase {
+	case phaseSourceSelect:
+		return renderSourceSelect(m)
+	case phaseSourceConfig:
+		return renderSourceConfig(m)
+	case phaseSolverSelect:
+		return renderSolverSelect(m)
+	case phaseLoading:
+		return renderLoading(m)
+	}
+
+	// Dashboard phase.
 	if m.showHelp {
 		return RenderHelpOverlay(m.width, m.height)
 	}
 
-	// Reserve space: 1 for status bar, 3 for detail bar, 1 padding.
+	// Tab bar.
+	tabs := renderTabBar(m.mode, m.width)
+
+	// Reserve space: 1 tab bar, 1 status bar, 3 detail bar, 1 padding.
+	tabH := 1
 	statusH := 1
 	detailH := 3
-	mainH := m.height - statusH - detailH - 1
+	mainH := m.height - tabH - statusH - detailH - 1
 	if mainH < 1 {
 		mainH = 1
 	}
@@ -219,7 +285,7 @@ func (m Model) View() string {
 	status := RenderStatusBar(m.problem, m.solution, m.mode, solverName, m.filtering, m.filterText, m.sortMode, m.solveErr, m.width)
 	status = lipgloss.NewStyle().Width(m.width).Render(status)
 
-	return lipgloss.JoinVertical(lipgloss.Left, main, detail, status)
+	return lipgloss.JoinVertical(lipgloss.Left, tabs, main, detail, status)
 }
 
 
