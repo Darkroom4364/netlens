@@ -171,20 +171,33 @@ func FormatResults(results []BenchResult) string {
 	out := header + divider
 	for _, r := range results {
 		rmseStr := fmt.Sprintf("%8.4f", r.RMSE)
-		if r.RMSE < 5 {
+		if math.IsNaN(r.RMSE) || math.IsInf(r.RMSE, 0) {
+			rmseStr = fmt.Sprintf("%8s", "N/A")
+		} else if r.RMSE < 5 {
 			rmseStr = style.Green(rmseStr)
 		} else if r.RMSE <= 20 {
 			rmseStr = style.Yellow(rmseStr)
 		} else {
 			rmseStr = style.Red(rmseStr)
 		}
+
+		maeStr := fmt.Sprintf("%8.4f", r.MAE)
+		if math.IsNaN(r.MAE) || math.IsInf(r.MAE, 0) {
+			maeStr = fmt.Sprintf("%8s", "N/A")
+		}
+
+		maxRelStr := fmt.Sprintf("%9.2f%%", r.MaxRelErr*100)
+		if math.IsNaN(r.MaxRelErr) || math.IsInf(r.MaxRelErr, 0) {
+			maxRelStr = fmt.Sprintf("%10s", "N/A")
+		}
+
 		identStr := fmt.Sprintf("%5.0f%%", r.IdentifiablePct)
 		if r.IdentifiablePct < 100 {
 			identStr = style.Red(identStr)
 		}
-		out += fmt.Sprintf("%s %-10s %5d %5d %5d %4d %8.1f %s %8.4f %9.2f%% %s %8.2f\n",
+		out += fmt.Sprintf("%s %-10s %5d %5d %5d %4d %8.1f %s %s %s %s %8.2f\n",
 			style.PadRight(style.Bold(r.Topology), 20), r.Solver, r.NumNodes, r.NumLinks, r.NumPaths,
-			r.Rank, r.ConditionNumber, style.PadRight(rmseStr, 8), r.MAE, r.MaxRelErr*100,
+			r.Rank, r.ConditionNumber, style.PadRight(rmseStr, 8), maeStr, maxRelStr,
 			style.PadRight(identStr, 6), r.DurationMs)
 	}
 	return out
