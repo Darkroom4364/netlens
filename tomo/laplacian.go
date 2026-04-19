@@ -133,19 +133,21 @@ func buildLinkLaplacian(topo Topology, n int) (*mat.Dense, error) {
 		nodeLinks[l.Dst] = append(nodeLinks[l.Dst], i)
 	}
 	L := mat.NewDense(n, n, nil)
+	deg := make([]float64, n)
 	for _, lks := range nodeLinks {
 		for _, a := range lks {
 			for _, b := range lks {
 				if a != b {
+					if L.At(a, b) == 0 {
+						deg[a]++
+					}
 					L.Set(a, b, -1)
 				}
 			}
 		}
 	}
 	for i := 0; i < n; i++ {
-		deg := 0.0
-		for j := 0; j < n; j++ { deg -= L.At(i, j) }
-		L.Set(i, i, deg)
+		L.Set(i, i, deg[i])
 	}
 	for i := 0; i < n; i++ {
 		if L.At(i, i) == 0 {
