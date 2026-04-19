@@ -25,6 +25,10 @@ vendor/
 # Claude Code worktrees
 /.claude/
 
+# Environment
+.env
+.env.*
+
 # OS
 .DS_Store
 Thumbs.db

@@ -23,12 +23,13 @@ type Problem struct {
 	svdOK   bool      // whether Factorize succeeded
 }
 
-// SVD returns the cached full SVD of A, computing it on first call.
+// SVD returns the cached thin SVD of A, computing it on first call.
+// Uses SVDThin to avoid allocating the full m×m U matrix.
 // Thread-safe via sync.Once.
 func (p *Problem) SVD() (*mat.SVD, bool) {
 	p.svdOnce.Do(func() {
 		p.svdFull = &mat.SVD{}
-		p.svdOK = p.svdFull.Factorize(p.A, mat.SVDFull)
+		p.svdOK = p.svdFull.Factorize(p.A, mat.SVDThin)
 	})
 	return p.svdFull, p.svdOK
 }

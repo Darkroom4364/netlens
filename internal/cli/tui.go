@@ -23,53 +23,61 @@ func newTUICmd() *cobra.Command {
 		Use:   "tui",
 		Short: "Launch interactive TUI for exploring tomography results",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			g, err := topology.LoadGraphML(topoFile)
-			if err != nil {
-				return fmt.Errorf("load topology: %w", err)
-			}
+			// If topology flag provided, skip wizard and go straight to dashboard.
+			if topoFile != "" {
+				g, err := topology.LoadGraphML(topoFile)
+				if err != nil {
+					return fmt.Errorf("load topology: %w", err)
+				}
 
-			sim, err := measure.Simulate(g, measure.DefaultSimConfig())
-			if err != nil {
-				return fmt.Errorf("simulate: %w", err)
-			}
+				sim, err := measure.Simulate(g, measure.DefaultSimConfig())
+				if err != nil {
+					return fmt.Errorf("simulate: %w", err)
+				}
 
-			solver, err := getSolver(method)
-			if err != nil {
+				solver, err := getSolver(method)
+				if err != nil {
+					return err
+				}
+				sol, err := solver.Solve(sim.Problem)
+				if err != nil {
+					return fmt.Errorf("solve: %w", err)
+				}
+
+				allSolvers := []tomo.Solver{
+					&tomo.TikhonovSolver{},
+					&tomo.TSVDSolver{},
+					&tomo.NNLSSolver{},
+					&tomo.ADMMSolver{},
+					&tomo.IRL1Solver{},
+					&tomo.VardiEMSolver{},
+					&tomo.TomogravitySolver{},
+					&tomo.LaplacianSolver{},
+				}
+				idx := 0
+				for i, s := range allSolvers {
+					if s.Name() == solver.Name() {
+						idx = i
+						break
+					}
+				}
+
+				model := tui.New(sim.Problem, sol, allSolvers, idx)
+				p := tea.NewProgram(model, tea.WithAltScreen())
+				_, err = p.Run()
 				return err
 			}
-			sol, err := solver.Solve(sim.Problem)
-			if err != nil {
-				return fmt.Errorf("solve: %w", err)
-			}
 
-			allSolvers := []tomo.Solver{
-				&tomo.TikhonovSolver{},
-				&tomo.TSVDSolver{},
-				&tomo.NNLSSolver{},
-				&tomo.ADMMSolver{},
-				&tomo.IRL1Solver{},
-				&tomo.VardiEMSolver{},
-				&tomo.TomogravitySolver{},
-				&tomo.LaplacianSolver{},
-			}
-			idx := 0
-			for i, s := range allSolvers {
-				if s.Name() == solver.Name() {
-					idx = i
-					break
-				}
-			}
-
-			model := tui.New(sim.Problem, sol, allSolvers, idx)
+			// No flags — launch interactive wizard.
+			model := tui.NewWizard()
 			p := tea.NewProgram(model, tea.WithAltScreen())
-			_, err = p.Run()
+			_, err := p.Run()
 			return err
 		},
 	}
 
-	cmd.Flags().StringVarP(&topoFile, "topology", "t", "", "Path to Topology Zoo GraphML file (required)")
+	cmd.Flags().StringVarP(&topoFile, "topology", "t", "", "Path to Topology Zoo GraphML file (optional, skips wizard)")
 	cmd.Flags().StringVarP(&method, "method", "m", "tikhonov", "Solver method: tsvd, tikhonov, nnls, admm, irl1, vardi, tomogravity, laplacian")
-	_ = cmd.MarkFlagRequired("topology")
 
 	return cmd
 }

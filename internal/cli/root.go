@@ -1,8 +1,10 @@
 package cli
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Darkroom4364/netlens/internal/style"
 	"github.com/spf13/cobra"
@@ -29,6 +31,7 @@ Feed it traceroutes. See the invisible.`,
 	root.PersistentFlags().Bool("quiet", false, "Suppress verbose output, show only summary and results")
 
 	root.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		loadDotEnv()
 		noColor, _ := cmd.Flags().GetBool("no-color")
 		if noColor {
 			style.SetEnabled(false)
@@ -73,6 +76,38 @@ func newCompletionCmd() *cobra.Command {
 				return fmt.Errorf("unsupported shell: %s", args[0])
 			}
 		},
+	}
+}
+
+// loadDotEnv reads a .env file and sets any variables not already in the environment.
+func loadDotEnv() {
+	f, err := os.Open(".env")
+	if err != nil {
+		return
+	}
+	defer f.Close() //nolint:errcheck // best-effort .env loading
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		k, v, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		k = strings.TrimSpace(k)
+		v = strings.TrimSpace(v)
+		if len(v) >= 2 {
+			if (v[0] == '"' && v[len(v)-1] == '"') ||
+				(v[0] == '\'' && v[len(v)-1] == '\'') {
+				v = v[1 : len(v)-1]
+			}
+		}
+		// Don't override existing env vars.
+		if os.Getenv(k) == "" {
+			_ = os.Setenv(k, v)
+		}
 	}
 }
 

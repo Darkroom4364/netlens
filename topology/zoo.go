@@ -114,7 +114,12 @@ func extractYEdLabel(innerXML string) string {
 	if endTag < 0 {
 		return ""
 	}
-	return strings.TrimSpace(rest[:endTag])
+	text := rest[:endTag]
+	// Strip nested XML elements (e.g. <y:LabelModel>...</y:LabelModel>).
+	if cut := strings.Index(text, "<"); cut >= 0 {
+		text = text[:cut]
+	}
+	return strings.TrimSpace(text)
 }
 
 // extractYEdGeometry extracts x, y coordinates from yEd Geometry element.

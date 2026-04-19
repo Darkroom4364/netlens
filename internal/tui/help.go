@@ -15,6 +15,7 @@ j/k, ↑/↓    Navigate links
 Enter        Expand/collapse node
 h            Heatmap view
 t            Tree view
+Tab          Cycle view
 /            Filter by node name
 s            Cycle sort mode
 m            Cycle solver

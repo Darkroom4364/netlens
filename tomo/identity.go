@@ -15,9 +15,11 @@ const nnlsZeroTol = 1e-15
 func AnalyzeQuality(A *mat.Dense) *MatrixQuality {
 	m, n := A.Dims()
 
-	// Compute SVD of A
+	// Full V is needed for null-space analysis (columns rank..n identify
+	// unidentifiable links). U is not used, so skip it to avoid allocating
+	// the m×m matrix for large measurement sets (e.g. 25K paths → ~5GB).
 	var svd mat.SVD
-	ok := svd.Factorize(A, mat.SVDFull)
+	ok := svd.Factorize(A, mat.SVDFullV)
 	if !ok {
 		// SVD failed — return worst-case quality
 		return &MatrixQuality{
