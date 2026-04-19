@@ -98,6 +98,12 @@ func loadDotEnv() {
 		}
 		k = strings.TrimSpace(k)
 		v = strings.TrimSpace(v)
+		if len(v) >= 2 {
+			if (v[0] == '"' && v[len(v)-1] == '"') ||
+				(v[0] == '\'' && v[len(v)-1] == '\'') {
+				v = v[1 : len(v)-1]
+			}
+		}
 		// Don't override existing env vars.
 		if os.Getenv(k) == "" {
 			os.Setenv(k, v)

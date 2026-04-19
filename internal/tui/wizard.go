@@ -4,6 +4,7 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -38,6 +39,7 @@ const (
 	sourceSimulate dataSource = iota
 	sourceRIPEAtlas
 	sourceTraceroute
+	sourceSimulateCustom
 )
 
 var sourceLabels = []string{
@@ -288,8 +290,8 @@ func (m Model) updateSourceSelect(msg tea.Msg) (Model, tea.Cmd) {
 		m.source = dataSource(m.wizCursor)
 		m.wizCursor = 0
 		m.phase = phaseSourceConfig
-		// For RIPE Atlas and traceroute, activate text input immediately.
-		if m.source == sourceRIPEAtlas || m.source == sourceTraceroute {
+		// For RIPE Atlas, traceroute, and custom simulate, activate text input immediately.
+		if m.source == sourceRIPEAtlas || m.source == sourceTraceroute || m.source == sourceSimulateCustom {
 			m.inputActive = true
 		}
 	}
@@ -311,7 +313,7 @@ func (m Model) updateSourceConfig(msg tea.Msg) (Model, tea.Cmd) {
 					m.loadErr = "Measurement ID must be a number"
 					return m, nil
 				}
-			} else if m.source == sourceTraceroute && m.filePathInput == "" {
+			} else if (m.source == sourceTraceroute || m.source == sourceSimulateCustom) && m.filePathInput == "" {
 				m.loadErr = "File path is required"
 				return m, nil
 			}
@@ -329,7 +331,7 @@ func (m Model) updateSourceConfig(msg tea.Msg) (Model, tea.Cmd) {
 		case "backspace":
 			if m.source == sourceRIPEAtlas && len(m.msmIDInput) > 0 {
 				m.msmIDInput = m.msmIDInput[:len(m.msmIDInput)-1]
-			} else if m.source == sourceTraceroute && len(m.filePathInput) > 0 {
+			} else if (m.source == sourceTraceroute || m.source == sourceSimulateCustom) && len(m.filePathInput) > 0 {
 				m.filePathInput = m.filePathInput[:len(m.filePathInput)-1]
 			}
 			m.loadErr = ""
@@ -366,7 +368,7 @@ func (m Model) updateSourceConfig(msg tea.Msg) (Model, tea.Cmd) {
 		} else {
 			// "Custom path..." selected — switch to text input.
 			m.inputActive = true
-			m.source = sourceTraceroute // reuse traceroute text input
+			m.source = sourceSimulateCustom
 			return m, nil
 		}
 		m.wizCursor = 0
@@ -384,7 +386,7 @@ func (m Model) updateSolverSelect(msg tea.Msg) (Model, tea.Cmd) {
 	case "esc":
 		m.wizCursor = 0
 		m.phase = phaseSourceConfig
-		if m.source == sourceRIPEAtlas || m.source == sourceTraceroute {
+		if m.source == sourceRIPEAtlas || m.source == sourceTraceroute || m.source == sourceSimulateCustom {
 			m.inputActive = true
 		}
 	case "j", "down":
@@ -413,6 +415,9 @@ func (m Model) updateSolverSelect(msg tea.Msg) (Model, tea.Cmd) {
 			topoPath := filepath.Join("testdata", "topologies", bundledTopologies[m.topoChoice]+".graphml")
 			m.loadingMsg = fmt.Sprintf("Loading %s...", bundledTopologies[m.topoChoice])
 			loadCmd = loadSimulateCmd(ctx, progCh, topoPath, m.solverIdx)
+		case sourceSimulateCustom:
+			m.loadingMsg = fmt.Sprintf("Loading %s...", filepath.Base(m.filePathInput))
+			loadCmd = loadSimulateCmd(ctx, progCh, m.filePathInput, m.solverIdx)
 		case sourceRIPEAtlas:
 			msmID, _ := strconv.Atoi(m.msmIDInput)
 			m.loadingMsg = fmt.Sprintf("Fetching MSM %d...", msmID)
@@ -431,7 +436,7 @@ func (m Model) updateLoading(msg tea.Msg) (Model, tea.Cmd) {
 	case loadResultMsg:
 		if msg.err != nil {
 			// Don't show "context canceled" as an error — it's an abort.
-			if ctx_err := context.Canceled; msg.err == ctx_err || msg.err.Error() == ctx_err.Error() {
+			if errors.Is(msg.err, context.Canceled) {
 				return m, nil
 			}
 			m.loadErr = msg.err.Error()
@@ -549,6 +554,11 @@ func renderSourceConfig(m Model) string {
 				styles.Dim.Render(" —"),
 				styles.Dim.Render(msm.desc)))
 		}
+
+	case sourceSimulateCustom:
+		b.WriteString(styles.WizardTitle.Render("Topology File"))
+		b.WriteString("\n\n")
+		b.WriteString(fmt.Sprintf("  File path: %s█\n", m.filePathInput))
 
 	case sourceTraceroute:
 		b.WriteString(styles.WizardTitle.Render("Traceroute File"))
