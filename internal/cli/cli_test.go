@@ -5,8 +5,13 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/Darkroom4364/netlens/tomo"
+	"github.com/spf13/cobra"
+	"gonum.org/v1/gonum/mat"
 )
 
 // executeCommand runs the CLI with the given args and captures both the
@@ -346,5 +351,346 @@ func TestCLI_TUISubcommandDetection(t *testing.T) {
 	_, err := executeCommand("tui")
 	if err == nil {
 		t.Error("expected error when tui is called without -t flag")
+	}
+}
+
+// --- Additional coverage tests ---
+
+func TestCLI_SetVersion(t *testing.T) {
+	SetVersion("1.2.3")
+	defer SetVersion("dev")
+
+	out, err := executeCommand("version")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "1.2.3") {
+		t.Fatalf("expected output to contain '1.2.3', got: %s", out)
+	}
+}
+
+func TestCLI_LoadDotEnv(t *testing.T) {
+	dir := t.TempDir()
+	envContent := `# comment line
+TEST_NETLENS_FOO=bar
+TEST_NETLENS_QUOTED="hello world"
+`
+	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte(envContent), 0644); err != nil {
+		t.Fatalf("failed to write .env: %v", err)
+	}
+
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get cwd: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("failed to chdir: %v", err)
+	}
+	defer func() {
+		_ = os.Chdir(origDir)
+		os.Unsetenv("TEST_NETLENS_FOO")
+		os.Unsetenv("TEST_NETLENS_QUOTED")
+	}()
+
+	_, _ = executeCommand("version")
+
+	if got := os.Getenv("TEST_NETLENS_FOO"); got != "bar" {
+		t.Errorf("expected TEST_NETLENS_FOO=bar, got %q", got)
+	}
+	if got := os.Getenv("TEST_NETLENS_QUOTED"); got != "hello world" {
+		t.Errorf("expected TEST_NETLENS_QUOTED='hello world', got %q", got)
+	}
+}
+
+func TestCLI_ScanTableFormat(t *testing.T) {
+	out, err := executeCommand("scan", "--source", "traceroute", "--file", "../../testdata/measurements/ripe_atlas_sample.json", "--format", "table")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(out) == 0 {
+		t.Fatal("expected non-empty output for table format")
+	}
+}
+
+func TestCLI_GetSolverAllValid(t *testing.T) {
+	names := []string{"tsvd", "tikhonov", "nnls", "admm", "irl1", "vardi", "tomogravity", "laplacian"}
+	for _, name := range names {
+		t.Run(name, func(t *testing.T) {
+			s, err := getSolver(name)
+			if err != nil {
+				t.Fatalf("getSolver(%q) returned error: %v", name, err)
+			}
+			if s == nil {
+				t.Fatalf("getSolver(%q) returned nil solver", name)
+			}
+		})
+	}
+}
+
+func TestCLI_GetSolverEmpty(t *testing.T) {
+	_, err := getSolver("")
+	if err == nil {
+		t.Fatal("expected error for empty solver name")
+	}
+	if !strings.Contains(err.Error(), "unknown solver method") {
+		t.Fatalf("expected 'unknown solver method' in error, got: %v", err)
+	}
+}
+
+func TestCLI_WarnNegativeDelays(t *testing.T) {
+	sol := &tomo.Solution{
+		X: mat.NewVecDense(3, []float64{1.0, -0.5, -0.2}),
+	}
+
+	// With tikhonov, should warn about negative delays.
+	cmd := &cobra.Command{}
+	errBuf := new(bytes.Buffer)
+	cmd.SetErr(errBuf)
+	warnNegativeDelays(cmd, sol, "tikhonov")
+	if !strings.Contains(errBuf.String(), "negative delay") {
+		t.Errorf("expected warning about negative delay for tikhonov, got: %q", errBuf.String())
+	}
+
+	// With nnls, should NOT warn (nnls guarantees non-negativity).
+	cmd2 := &cobra.Command{}
+	errBuf2 := new(bytes.Buffer)
+	cmd2.SetErr(errBuf2)
+	warnNegativeDelays(cmd2, sol, "nnls")
+	if errBuf2.Len() > 0 {
+		t.Errorf("expected no warning for nnls, got: %q", errBuf2.String())
+	}
+}
+
+func TestCLI_PrintScanTable(t *testing.T) {
+	// Build a minimal Problem + Solution to exercise printScanTable.
+	p := &tomo.Problem{
+		Links: []tomo.Link{
+			{ID: 0, Src: 1, Dst: 2},
+			{ID: 1, Src: 2, Dst: 3},
+			{ID: 2, Src: 3, Dst: 4},
+		},
+		Quality: &tomo.MatrixQuality{
+			Rank:                3,
+			NumLinks:            3,
+			NumPaths:            3,
+			ConditionNumber:     1.5,
+			IdentifiableFrac:    1.0,
+			UnidentifiableLinks: nil,
+			CoveragePerLink:     []int{2, 3, 1},
+		},
+	}
+	sol := &tomo.Solution{
+		X: mat.NewVecDense(3, []float64{0.5, 15.0, 2.0}),
+	}
+
+	// Capture stdout (printScanTable uses fmt.Printf).
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	printScanTable(p, sol, 0, false)
+
+	w.Close()
+	captured, _ := io.ReadAll(r)
+	r.Close()
+	os.Stdout = oldStdout
+
+	out := string(captured)
+	if !strings.Contains(out, "links") {
+		t.Errorf("expected 'links' in table output, got:\n%s", out)
+	}
+	if !strings.Contains(out, "Identifiable links") {
+		t.Errorf("expected 'Identifiable links' in table output, got:\n%s", out)
+	}
+}
+
+func TestCLI_PrintScanTableWithTop(t *testing.T) {
+	p := &tomo.Problem{
+		Links: []tomo.Link{
+			{ID: 0, Src: 1, Dst: 2},
+			{ID: 1, Src: 2, Dst: 3},
+			{ID: 2, Src: 3, Dst: 4},
+		},
+		Quality: &tomo.MatrixQuality{
+			Rank:                3,
+			NumLinks:            3,
+			NumPaths:            3,
+			ConditionNumber:     1.5,
+			IdentifiableFrac:    1.0,
+			UnidentifiableLinks: nil,
+			CoveragePerLink:     []int{2, 3, 1},
+		},
+	}
+	sol := &tomo.Solution{
+		X: mat.NewVecDense(3, []float64{0.5, 15.0, 2.0}),
+	}
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	printScanTable(p, sol, 1, true) // top=1, quiet=true
+
+	w.Close()
+	captured, _ := io.ReadAll(r)
+	r.Close()
+	os.Stdout = oldStdout
+
+	out := string(captured)
+	if out == "" {
+		t.Error("expected non-empty output from printScanTable with top=1")
+	}
+}
+
+func TestCLI_ScanMaxAnonymousInvalid(t *testing.T) {
+	_, err := executeCommand("scan", "--source", "traceroute", "--file", "../../testdata/measurements/ripe_atlas_sample.json", "--max-anonymous", "1.5")
+	if err == nil {
+		t.Fatal("expected error for --max-anonymous > 1")
+	}
+	if !strings.Contains(err.Error(), "max-anonymous") {
+		t.Fatalf("expected error about max-anonymous, got: %v", err)
+	}
+}
+
+func TestCLI_ScanTracerouteNoFile(t *testing.T) {
+	_, err := executeCommand("scan", "--source", "traceroute")
+	if err == nil {
+		t.Fatal("expected error when --source=traceroute without --file")
+	}
+	if !strings.Contains(err.Error(), "--file") {
+		t.Fatalf("expected error about --file, got: %v", err)
+	}
+}
+
+func TestCLI_ScanUnknownFormat(t *testing.T) {
+	_, err := executeCommand("scan", "--source", "traceroute", "--file", "../../testdata/measurements/ripe_atlas_sample.json", "--format", "xml")
+	if err == nil {
+		t.Fatal("expected error for unknown format 'xml'")
+	}
+	if !strings.Contains(err.Error(), "unknown format") {
+		t.Fatalf("expected 'unknown format' error, got: %v", err)
+	}
+}
+
+func TestCLI_CompletionFish(t *testing.T) {
+	out, err := executeCommand("completion", "fish")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.TrimSpace(out) == "" {
+		t.Fatal("expected non-empty fish completion output")
+	}
+}
+
+func TestCLI_BenchmarkNonexistentDir(t *testing.T) {
+	_, err := executeCommand("benchmark", "-t", "/nonexistent/path/topos")
+	if err == nil {
+		t.Fatal("expected error for nonexistent topology directory")
+	}
+}
+
+func TestCLI_SimulateCustomNoise(t *testing.T) {
+	_, err := executeCommand("simulate", "-t", "../../testdata/topologies/abilene.graphml", "-m", "nnls", "--noise", "0.5")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestCLI_ScanQuiet(t *testing.T) {
+	out, err := executeCommand("scan", "--source", "traceroute", "--file", "../../testdata/measurements/ripe_atlas_sample.json", "--quiet")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(out, "Topology:") {
+		t.Error("expected preamble suppressed with --quiet")
+	}
+}
+
+func TestCLI_ScanWithTikhonov(t *testing.T) {
+	// Exercises the scan path with a non-nnls solver (triggers warnNegativeDelays in context).
+	_, err := executeCommand("scan", "--source", "traceroute", "--file", "../../testdata/measurements/ripe_atlas_sample.json", "-m", "tikhonov")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestCLI_PlanHighBudget(t *testing.T) {
+	// With a high budget, should reach full rank and print "all links identifiable".
+	out, err := executeCommand("plan", "-t", "../../testdata/topologies/abilene.graphml", "--budget", "100")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should contain either "all links identifiable" or "Rank deficit"
+	if !strings.Contains(out, "identifiable") && !strings.Contains(out, "Rank deficit") {
+		t.Errorf("expected rank summary in output, got:\n%s", out)
+	}
+}
+
+func TestCLI_BenchmarkCustomFlags(t *testing.T) {
+	out, err := executeCommand("benchmark", "-t", "../../testdata/topologies", "--noise", "0.2", "--congestion-links", "3", "--seed", "99")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "Topology") {
+		t.Fatalf("expected output to contain 'Topology', got:\n%s", out)
+	}
+}
+
+func TestCLI_ScanWithMethod(t *testing.T) {
+	// Exercise scan with different solver methods.
+	for _, method := range []string{"tsvd", "admm"} {
+		t.Run(method, func(t *testing.T) {
+			_, err := executeCommand("scan", "--source", "traceroute", "--file", "../../testdata/measurements/ripe_atlas_sample.json", "-m", method)
+			if err != nil {
+				t.Fatalf("unexpected error for method %s: %v", method, err)
+			}
+		})
+	}
+}
+
+func TestCLI_LoadDotEnvSingleQuoted(t *testing.T) {
+	dir := t.TempDir()
+	envContent := "TEST_NETLENS_SQ='single quoted'\n"
+	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte(envContent), 0644); err != nil {
+		t.Fatalf("failed to write .env: %v", err)
+	}
+
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get cwd: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("failed to chdir: %v", err)
+	}
+	defer func() {
+		_ = os.Chdir(origDir)
+		os.Unsetenv("TEST_NETLENS_SQ")
+	}()
+
+	_, _ = executeCommand("version")
+
+	if got := os.Getenv("TEST_NETLENS_SQ"); got != "single quoted" {
+		t.Errorf("expected TEST_NETLENS_SQ='single quoted', got %q", got)
+	}
+}
+
+func TestCLI_BenchmarkGaussianNoise(t *testing.T) {
+	out, err := executeCommand("benchmark", "-t", "../../testdata/topologies", "--noise-model", "gaussian")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "Topology") {
+		t.Fatalf("expected output to contain 'Topology', got:\n%s", out)
+	}
+}
+
+func TestCLI_RootNoArgs(t *testing.T) {
+	// Running with no args should show help (exercises the RunE path).
+	out, err := executeCommand()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "netlens") {
+		t.Fatalf("expected help output, got:\n%s", out)
 	}
 }

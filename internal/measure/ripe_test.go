@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -406,5 +407,50 @@ func TestSliceIterError(t *testing.T) {
 	}
 	if iter.Err() == nil {
 		t.Error("Err() should return the error")
+	}
+}
+
+func TestWaitForResults_Stopped(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/measurements/99/":
+			_, _ = fmt.Fprint(w, `{"id":99,"status":{"id":4,"name":"Stopped"}}`)
+		case "/measurements/99/results/":
+			_, _ = fmt.Fprint(w, mockTracerouteResults)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	src := NewRIPEAtlasSource("test-api-key", srv.URL, srv.Client())
+	ctx := context.Background()
+
+	results, err := src.WaitForResults(ctx, 99, 5*time.Second)
+	if err != nil {
+		t.Fatalf("WaitForResults: %v", err)
+	}
+	if len(results) == 0 {
+		t.Fatal("expected non-empty results")
+	}
+}
+
+func TestWaitForResults_Timeout(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprint(w, `{"id":99,"status":{"id":1,"name":"Specified"}}`)
+	}))
+	defer srv.Close()
+
+	src := NewRIPEAtlasSource("test-api-key", srv.URL, srv.Client())
+	ctx := context.Background()
+
+	_, err := src.WaitForResults(ctx, 99, 100*time.Millisecond)
+	if err == nil {
+		t.Fatal("expected timeout error")
+	}
+	if !strings.Contains(err.Error(), "timeout") {
+		t.Errorf("expected error to contain 'timeout', got: %v", err)
 	}
 }
