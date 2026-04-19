@@ -85,7 +85,7 @@ func loadDotEnv() {
 	if err != nil {
 		return
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // best-effort .env loading
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
 		line := strings.TrimSpace(sc.Text())
@@ -106,7 +106,7 @@ func loadDotEnv() {
 		}
 		// Don't override existing env vars.
 		if os.Getenv(k) == "" {
-			os.Setenv(k, v)
+			_ = os.Setenv(k, v)
 		}
 	}
 }
