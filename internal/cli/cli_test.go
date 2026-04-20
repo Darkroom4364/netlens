@@ -386,9 +386,14 @@ TEST_NETLENS_QUOTED="hello world"
 	if err := os.Chdir(dir); err != nil {
 		t.Fatalf("failed to chdir: %v", err)
 	}
-	t.Setenv("TEST_NETLENS_FOO", "")
-	t.Setenv("TEST_NETLENS_QUOTED", "")
-	defer func() { _ = os.Chdir(origDir) }()
+	// Ensure vars are unset before loadDotEnv runs (LookupEnv skips existing).
+	_ = os.Unsetenv("TEST_NETLENS_FOO")
+	_ = os.Unsetenv("TEST_NETLENS_QUOTED")
+	defer func() {
+		_ = os.Chdir(origDir)
+		_ = os.Unsetenv("TEST_NETLENS_FOO")
+		_ = os.Unsetenv("TEST_NETLENS_QUOTED")
+	}()
 
 	_, _ = executeCommand("version")
 
@@ -673,8 +678,11 @@ func TestCLI_LoadDotEnvSingleQuoted(t *testing.T) {
 	if err := os.Chdir(dir); err != nil {
 		t.Fatalf("failed to chdir: %v", err)
 	}
-	t.Setenv("TEST_NETLENS_SQ", "")
-	defer func() { _ = os.Chdir(origDir) }()
+	_ = os.Unsetenv("TEST_NETLENS_SQ")
+	defer func() {
+		_ = os.Chdir(origDir)
+		_ = os.Unsetenv("TEST_NETLENS_SQ")
+	}()
 
 	_, _ = executeCommand("version")
 
