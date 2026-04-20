@@ -135,7 +135,7 @@ func computeDetectionRate(gt []float64, est *mat.VecDense, quality *tomo.MatrixQ
 	sort.Slice(gtLinks, func(i, j int) bool { return gtLinks[i].val > gtLinks[j].val })
 	sort.Slice(estLinks, func(i, j int) bool { return estLinks[i].val > estLinks[j].val })
 
-	// Check top-k where k = min(3, len/4, len)
+	// Check top-k where k = min(3, len/4)
 	k := min(3, len(gtLinks)/4)
 	if k == 0 {
 		k = 1

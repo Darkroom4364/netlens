@@ -437,7 +437,12 @@ func (m Model) updateLoading(msg tea.Msg) (Model, tea.Cmd) {
 		if msg.err != nil {
 			// Don't show "context canceled" as an error — it's an abort.
 			if errors.Is(msg.err, context.Canceled) {
+				m.cancelLoad = nil
 				return m, nil
+			}
+			if m.cancelLoad != nil {
+				m.cancelLoad()
+				m.cancelLoad = nil
 			}
 			m.loadErr = msg.err.Error()
 			return m, nil
