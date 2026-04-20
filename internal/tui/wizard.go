@@ -442,6 +442,10 @@ func (m Model) updateLoading(msg tea.Msg) (Model, tea.Cmd) {
 			m.loadErr = msg.err.Error()
 			return m, nil
 		}
+		if m.cancelLoad != nil {
+			m.cancelLoad()
+			m.cancelLoad = nil
+		}
 		m.problem = msg.problem
 		m.solution = msg.solution
 		m.solvers = msg.solvers

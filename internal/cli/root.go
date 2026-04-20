@@ -105,7 +105,7 @@ func loadDotEnv() {
 			}
 		}
 		// Don't override existing env vars.
-		if os.Getenv(k) == "" {
+		if _, exists := os.LookupEnv(k); !exists {
 			_ = os.Setenv(k, v)
 		}
 	}
