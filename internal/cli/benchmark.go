@@ -42,7 +42,7 @@ configurable noise, runs every solver, and produces a comparison table.`,
 				if err != nil {
 					return fmt.Errorf("create CPU profile: %w", err)
 				}
-				defer f.Close()
+				defer func() { _ = f.Close() }()
 				if err := pprof.StartCPUProfile(f); err != nil {
 					return fmt.Errorf("start CPU profile: %w", err)
 				}
@@ -123,7 +123,7 @@ configurable noise, runs every solver, and produces a comparison table.`,
 				if err != nil {
 					return fmt.Errorf("create memory profile: %w", err)
 				}
-				defer f.Close()
+				defer func() { _ = f.Close() }()
 				runtime.GC()
 				if err := pprof.WriteHeapProfile(f); err != nil {
 					return fmt.Errorf("write memory profile: %w", err)
