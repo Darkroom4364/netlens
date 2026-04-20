@@ -347,10 +347,11 @@ func TestCLI_TUISubcommandDetection(t *testing.T) {
 	if !strings.Contains(out, "tui") {
 		t.Skip("tui subcommand not available (build without -tags tui)")
 	}
-	// Verify it requires -t flag
-	_, err := executeCommand("tui")
-	if err == nil {
-		t.Error("expected error when tui is called without -t flag")
+	// When built with -tags tui, running without -t launches the wizard
+	// (interactive Bubble Tea program), so we only verify the subcommand
+	// is registered in help output.
+	if !strings.Contains(out, "Launch interactive TUI") {
+		t.Error("expected tui subcommand description in help output")
 	}
 }
 
