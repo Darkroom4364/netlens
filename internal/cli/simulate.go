@@ -81,83 +81,9 @@ the known ground truth.`,
 
 			warnNegativeDelays(cmd, sol, method)
 
-			// Print results
-			topoName := filepath.Base(topoFile)
-			q := sim.Problem.Quality
-			p := sim.Problem
-
 			quiet, _ := cmd.Flags().GetBool("quiet")
-			if !quiet {
-				fmt.Printf("Topology:       %s (%d nodes, %d links)\n", topoName, g.NumNodes(), g.NumLinks())
-				fmt.Printf("Paths:          %d\n", sim.Problem.NumPaths())
-				fmt.Printf("Matrix rank:    %d / %d (identifiable: %.0f%%)\n",
-					q.Rank, q.NumLinks, q.IdentifiableFrac*100)
-				fmt.Printf("Condition:      %.2f\n", q.ConditionNumber)
-				fmt.Printf("Solver:         %s\n", sol.Method)
-				fmt.Printf("Duration:       %v\n", sol.Duration)
-				fmt.Printf("Residual:       %.6f\n", sol.Residual)
-			}
-
-			// Compute error metrics first for summary line
-			var sumSqErr, sumAbsErr float64
-			identCount := 0
-			for i, gt := range sim.GroundTruth {
-				est := sol.X.AtVec(i)
-				diff := est - gt
-				if q.IsIdentifiable(i) {
-					identCount++
-					sumSqErr += diff * diff
-					sumAbsErr += math.Abs(diff)
-				}
-			}
-
-			var rmse, mae float64
-			if identCount > 0 {
-				rmse = math.Sqrt(sumSqErr / float64(identCount))
-				mae = sumAbsErr / float64(identCount)
-			}
-
-			// Summary line
-			congested := 0
-			for i := 0; i < p.NumLinks(); i++ {
-				if sol.X.AtVec(i) > style.DelayCongestionMS {
-					congested++
-				}
-			}
-			fmt.Printf("\n%s  %s  %s  %s\n\n",
-				style.Bold(fmt.Sprintf("%d links", p.NumLinks())),
-				style.Yellow(fmt.Sprintf("%d congested", congested)),
-				fmt.Sprintf("RMSE %.2fms", rmse),
-				fmt.Sprintf("%.0f%% identifiable", q.IdentifiableFrac*100))
-
-			// Sort links by delay descending
-			indices := make([]int, len(sim.GroundTruth))
-			for i := range indices {
-				indices[i] = i
-			}
-			sort.Slice(indices, func(a, b int) bool {
-				return sol.X.AtVec(indices[a]) > sol.X.AtVec(indices[b])
-			})
-			if top > 0 && top < len(indices) {
-				indices = indices[:top]
-			}
-
-			// Per-link comparison
-			fmt.Printf("%s\n", style.Bold(fmt.Sprintf("%-6s %-10s %-10s %-10s %-8s", "Link", "Truth(ms)", "Est(ms)", "Error(ms)", "Ident")))
-			fmt.Println("------------------------------------------------------")
-			for _, i := range indices {
-				gt := sim.GroundTruth[i]
-				est := sol.X.AtVec(i)
-				diff := est - gt
-				ident := style.ColorIdent(q.IsIdentifiable(i))
-				fmt.Printf("%-6d %s %s %-+10.3f %s\n", i, style.PadRight(style.ColorDelay(gt), 10), style.PadRight(style.ColorDelay(est), 10), diff, style.PadRight(ident, 8))
-			}
-
-			if identCount > 0 {
-				fmt.Printf("\nRMSE (identifiable): %.4f ms\n", rmse)
-				fmt.Printf("MAE  (identifiable): %.4f ms\n", mae)
-			}
-
+			topoName := filepath.Base(topoFile)
+			printSimResults(sim, sol, topoName, g.NumNodes(), g.NumLinks(), top, quiet)
 			return nil
 		},
 	}
@@ -175,6 +101,79 @@ the known ground truth.`,
 	_ = cmd.MarkFlagRequired("topology")
 
 	return cmd
+}
+
+// printSimResults prints the simulation comparison table and error metrics.
+func printSimResults(sim *measure.SimResult, sol *tomo.Solution, topoName string, numNodes, numLinks, top int, quiet bool) {
+	q := sim.Problem.Quality
+	p := sim.Problem
+
+	if !quiet {
+		fmt.Printf("Topology:       %s (%d nodes, %d links)\n", topoName, numNodes, numLinks)
+		fmt.Printf("Paths:          %d\n", sim.Problem.NumPaths())
+		fmt.Printf("Matrix rank:    %d / %d (identifiable: %.0f%%)\n",
+			q.Rank, q.NumLinks, q.IdentifiableFrac*100)
+		fmt.Printf("Condition:      %.2f\n", q.ConditionNumber)
+		fmt.Printf("Solver:         %s\n", sol.Method)
+		fmt.Printf("Duration:       %v\n", sol.Duration)
+		fmt.Printf("Residual:       %.6f\n", sol.Residual)
+	}
+
+	var sumSqErr, sumAbsErr float64
+	identCount := 0
+	for i, gt := range sim.GroundTruth {
+		est := sol.X.AtVec(i)
+		diff := est - gt
+		if q.IsIdentifiable(i) {
+			identCount++
+			sumSqErr += diff * diff
+			sumAbsErr += math.Abs(diff)
+		}
+	}
+
+	var rmse, mae float64
+	if identCount > 0 {
+		rmse = math.Sqrt(sumSqErr / float64(identCount))
+		mae = sumAbsErr / float64(identCount)
+	}
+
+	congested := 0
+	for i := 0; i < p.NumLinks(); i++ {
+		if sol.X.AtVec(i) > style.DelayCongestionMS {
+			congested++
+		}
+	}
+	fmt.Printf("\n%s  %s  %s  %s\n\n",
+		style.Bold(fmt.Sprintf("%d links", p.NumLinks())),
+		style.Yellow(fmt.Sprintf("%d congested", congested)),
+		fmt.Sprintf("RMSE %.2fms", rmse),
+		fmt.Sprintf("%.0f%% identifiable", q.IdentifiableFrac*100))
+
+	indices := make([]int, len(sim.GroundTruth))
+	for i := range indices {
+		indices[i] = i
+	}
+	sort.Slice(indices, func(a, b int) bool {
+		return sol.X.AtVec(indices[a]) > sol.X.AtVec(indices[b])
+	})
+	if top > 0 && top < len(indices) {
+		indices = indices[:top]
+	}
+
+	fmt.Printf("%s\n", style.Bold(fmt.Sprintf("%-6s %-10s %-10s %-10s %-8s", "Link", "Truth(ms)", "Est(ms)", "Error(ms)", "Ident")))
+	fmt.Println("------------------------------------------------------")
+	for _, i := range indices {
+		gt := sim.GroundTruth[i]
+		est := sol.X.AtVec(i)
+		diff := est - gt
+		ident := style.ColorIdent(q.IsIdentifiable(i))
+		fmt.Printf("%-6d %s %s %-+10.3f %s\n", i, style.PadRight(style.ColorDelay(gt), 10), style.PadRight(style.ColorDelay(est), 10), diff, style.PadRight(ident, 8))
+	}
+
+	if identCount > 0 {
+		fmt.Printf("\nRMSE (identifiable): %.4f ms\n", rmse)
+		fmt.Printf("MAE  (identifiable): %.4f ms\n", mae)
+	}
 }
 
 // warnNegativeDelays prints a warning to stderr if the solution contains negative estimates.

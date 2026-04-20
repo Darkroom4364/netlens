@@ -46,72 +46,11 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 				return fmt.Errorf("--max-anonymous must be in [0, 1] (got %.4f)", maxAnonymous)
 			}
 
-			// 1. Load measurements
-			var measurements []tomo.PathMeasurement
-			var err error
-
-			switch source {
-			case "ripe":
-				if msmID == 0 {
-					return fmt.Errorf("--msm is required when --source=ripe")
-				}
-
-				var cache *measure.Cache
-				var cacheKey string
-				if useCache {
-					cache = measure.NewCache("")
-					cacheKey = cache.Key(strconv.Itoa(msmID), strconv.FormatInt(start, 10), strconv.FormatInt(stop, 10))
-				}
-
-				if cache != nil && cache.Has(cacheKey) {
-					raw, loadErr := cache.Load(cacheKey)
-					if loadErr != nil {
-						return fmt.Errorf("load cache: %w", loadErr)
-					}
-					if err = json.Unmarshal(raw, &measurements); err != nil {
-						return fmt.Errorf("parse cached results: %w", err)
-					}
-					fmt.Println("Loaded results from cache")
-				} else {
-					apiKey := os.Getenv("RIPE_ATLAS_API_KEY")
-					src := measure.NewRIPEAtlasSource(apiKey, "", nil)
-					ctx := context.Background()
-					measurements, err = src.FetchResults(ctx, msmID, start, stop)
-					if err != nil {
-						return fmt.Errorf("fetch RIPE Atlas results: %w", err)
-					}
-					if cache != nil {
-						raw, marshalErr := json.Marshal(measurements)
-						if marshalErr == nil {
-							_ = cache.Store(cacheKey, raw)
-						}
-					}
-				}
-
-			case "traceroute":
-				if file == "" {
-					return fmt.Errorf("--file is required when --source=traceroute")
-				}
-				data, readErr := os.ReadFile(file)
-				if readErr != nil {
-					return fmt.Errorf("read file: %w", readErr)
-				}
-				// Try RIPE Atlas format first, then scamper
-				measurements, err = measure.ParseRIPEAtlasTraceroute(data)
-				if err != nil || len(measurements) == 0 {
-					measurements, err = measure.ParseScamperJSON(data)
-				}
-				if err != nil {
-					return fmt.Errorf("parse traceroute file: %w", err)
-				}
-
-			default:
-				return fmt.Errorf("unknown source %q (expected \"ripe\" or \"traceroute\")", source)
+			measurements, err := loadMeasurements(source, msmID, file, start, stop, useCache)
+			if err != nil {
+				return err
 			}
 
-			if len(measurements) == 0 {
-				return fmt.Errorf("no measurements loaded")
-			}
 			quiet, _ := cmd.Flags().GetBool("quiet")
 			if !quiet {
 				fmt.Printf("Loaded %d measurements from %s\n", len(measurements), source)
@@ -205,6 +144,75 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 	_ = cmd.MarkFlagRequired("source")
 
 	return cmd
+}
+
+// loadMeasurements fetches or reads traceroute measurements from the given source.
+func loadMeasurements(source string, msmID int, file string, start, stop int64, useCache bool) ([]tomo.PathMeasurement, error) {
+	var measurements []tomo.PathMeasurement
+	var err error
+
+	switch source {
+	case "ripe":
+		if msmID == 0 {
+			return nil, fmt.Errorf("--msm is required when --source=ripe")
+		}
+
+		var cache *measure.Cache
+		var cacheKey string
+		if useCache {
+			cache = measure.NewCache("")
+			cacheKey = cache.Key(strconv.Itoa(msmID), strconv.FormatInt(start, 10), strconv.FormatInt(stop, 10))
+		}
+
+		if cache != nil && cache.Has(cacheKey) {
+			raw, loadErr := cache.Load(cacheKey)
+			if loadErr != nil {
+				return nil, fmt.Errorf("load cache: %w", loadErr)
+			}
+			if err = json.Unmarshal(raw, &measurements); err != nil {
+				return nil, fmt.Errorf("parse cached results: %w", err)
+			}
+			fmt.Println("Loaded results from cache")
+		} else {
+			apiKey := os.Getenv("RIPE_ATLAS_API_KEY")
+			src := measure.NewRIPEAtlasSource(apiKey, "", nil)
+			ctx := context.Background()
+			measurements, err = src.FetchResults(ctx, msmID, start, stop)
+			if err != nil {
+				return nil, fmt.Errorf("fetch RIPE Atlas results: %w", err)
+			}
+			if cache != nil {
+				raw, marshalErr := json.Marshal(measurements)
+				if marshalErr == nil {
+					_ = cache.Store(cacheKey, raw)
+				}
+			}
+		}
+
+	case "traceroute":
+		if file == "" {
+			return nil, fmt.Errorf("--file is required when --source=traceroute")
+		}
+		data, readErr := os.ReadFile(file)
+		if readErr != nil {
+			return nil, fmt.Errorf("read file: %w", readErr)
+		}
+		measurements, err = measure.ParseRIPEAtlasTraceroute(data)
+		if err != nil || len(measurements) == 0 {
+			measurements, err = measure.ParseScamperJSON(data)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("parse traceroute file: %w", err)
+		}
+
+	default:
+		return nil, fmt.Errorf("unknown source %q (expected \"ripe\" or \"traceroute\")", source)
+	}
+
+	if len(measurements) == 0 {
+		return nil, fmt.Errorf("no measurements loaded")
+	}
+	return measurements, nil
 }
 
 // printScanTable prints a human-readable per-link summary table.
