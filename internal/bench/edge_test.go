@@ -1,6 +1,7 @@
 package bench
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Darkroom4364/netlens/internal/measure"
@@ -28,7 +29,7 @@ func TestEdgeMinimalTopology(t *testing.T) {
 	cfg := measure.DefaultSimConfig()
 	cfg.CongestionLinks = 0
 
-	results, err := RunBenchmark("minimal", g, defaultSolvers(), cfg)
+	results, err := RunBenchmark(context.Background(),"minimal", g, defaultSolvers(), cfg)
 	if err != nil {
 		t.Fatalf("RunBenchmark on minimal topo: %v", err)
 	}
@@ -51,7 +52,7 @@ func TestEdgeNoiseZero(t *testing.T) {
 	cfg.NoiseScale = 0
 	cfg.CongestionLinks = 0
 
-	results, err := RunBenchmark("noise0", g, defaultSolvers(), cfg)
+	results, err := RunBenchmark(context.Background(),"noise0", g, defaultSolvers(), cfg)
 	if err != nil {
 		t.Fatalf("RunBenchmark noise=0: %v", err)
 	}
@@ -71,7 +72,7 @@ func TestEdgeNoiseExtreme(t *testing.T) {
 	cfg := measure.DefaultSimConfig()
 	cfg.NoiseScale = 100.0
 
-	results, err := RunBenchmark("noise100", g, defaultSolvers(), cfg)
+	results, err := RunBenchmark(context.Background(),"noise100", g, defaultSolvers(), cfg)
 	if err != nil {
 		t.Fatalf("RunBenchmark noise=100: %v", err)
 	}
@@ -86,7 +87,7 @@ func TestEdgeZeroCongestionLinks(t *testing.T) {
 	cfg.CongestionLinks = 0
 	cfg.CongestionFactor = 5.0
 
-	results, err := RunBenchmark("no-congestion", g, defaultSolvers(), cfg)
+	results, err := RunBenchmark(context.Background(),"no-congestion", g, defaultSolvers(), cfg)
 	if err != nil {
 		t.Fatalf("RunBenchmark 0 congestion links: %v", err)
 	}
@@ -102,7 +103,7 @@ func TestEdgeAllLinksCongested(t *testing.T) {
 	cfg.CongestionLinks = 100
 	cfg.CongestionFactor = 10.0
 
-	results, err := RunBenchmark("all-congested", g, defaultSolvers(), cfg)
+	results, err := RunBenchmark(context.Background(),"all-congested", g, defaultSolvers(), cfg)
 	if err != nil {
 		t.Fatalf("RunBenchmark all congested: %v", err)
 	}
@@ -126,7 +127,7 @@ func TestEdgePathFractionTiny(t *testing.T) {
 	cfg := measure.DefaultSimConfig()
 	cfg.PathFraction = 0.01 // very few paths
 
-	results, err := RunBenchmark("tiny-frac", g, defaultSolvers(), cfg)
+	results, err := RunBenchmark(context.Background(),"tiny-frac", g, defaultSolvers(), cfg)
 	if err != nil {
 		t.Fatalf("RunBenchmark PathFraction=0.01: %v", err)
 	}
@@ -140,7 +141,7 @@ func TestEdgeSamplesPerPathOne(t *testing.T) {
 	cfg := measure.DefaultSimConfig()
 	cfg.SamplesPerPath = 1
 
-	results, err := RunBenchmark("samples1", g, defaultSolvers(), cfg)
+	results, err := RunBenchmark(context.Background(),"samples1", g, defaultSolvers(), cfg)
 	if err != nil {
 		t.Fatalf("RunBenchmark SamplesPerPath=1: %v", err)
 	}
@@ -154,7 +155,7 @@ func TestEdgeSamplesPerPathExcessive(t *testing.T) {
 	cfg := measure.DefaultSimConfig()
 	cfg.SamplesPerPath = 100
 
-	results, err := RunBenchmark("samples100", g, defaultSolvers(), cfg)
+	results, err := RunBenchmark(context.Background(),"samples100", g, defaultSolvers(), cfg)
 	if err != nil {
 		t.Fatalf("RunBenchmark SamplesPerPath=100: %v", err)
 	}

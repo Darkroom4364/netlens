@@ -1,6 +1,7 @@
 package tomo_test
 
 import (
+	"context"
 	"math"
 	"testing"
 
@@ -16,7 +17,7 @@ func TestLaplacianTriangleSmooth(t *testing.T) {
 	// Smooth ground truth: adjacent links have similar values.
 	groundTruth := []float64{5.0, 5.5, 4.5}
 	p := buildTriangleProblem(t, groundTruth)
-	sol, err := (&tomo.LaplacianSolver{Lambda: 0.01}).Solve(p)
+	sol, err := (&tomo.LaplacianSolver{Lambda: 0.01}).Solve(context.Background(), p)
 	if err != nil {
 		t.Fatalf("Solve: %v", err)
 	}
@@ -45,11 +46,11 @@ func TestLaplacianChainSmoother(t *testing.T) {
 		t.Fatalf("build: %v", err)
 	}
 
-	lapSol, err := (&tomo.LaplacianSolver{Lambda: 0.1}).Solve(p)
+	lapSol, err := (&tomo.LaplacianSolver{Lambda: 0.1}).Solve(context.Background(), p)
 	if err != nil {
 		t.Fatalf("laplacian: %v", err)
 	}
-	tikSol, err := (&tomo.TikhonovSolver{Lambda: 0.1}).Solve(p)
+	tikSol, err := (&tomo.TikhonovSolver{Lambda: 0.1}).Solve(context.Background(), p)
 	if err != nil {
 		t.Fatalf("tikhonov: %v", err)
 	}

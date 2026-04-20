@@ -157,7 +157,7 @@ analysis, solves the inverse problem, and outputs per-link estimates.`,
 			if err != nil {
 				return err
 			}
-			sol, err := solver.Solve(problem)
+			sol, err := solver.Solve(cmd.Context(), problem)
 			if err != nil {
 				return fmt.Errorf("solve: %w", err)
 			}

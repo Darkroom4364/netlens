@@ -1,6 +1,7 @@
 package tomo_test
 
 import (
+	"context"
 	"math"
 	"testing"
 
@@ -12,7 +13,7 @@ func TestBootstrapTriangleNoiseFree(t *testing.T) {
 	groundTruth := []float64{5.0, 3.0, 7.0}
 	p := buildTriangleProblem(t, groundTruth)
 
-	sol, err := tomo.Bootstrap(p, &tomo.NNLSSolver{}, tomo.BootstrapConfig{
+	sol, err := tomo.Bootstrap(context.Background(), p, &tomo.NNLSSolver{}, tomo.BootstrapConfig{
 		NumSamples: 50,
 		Seed:       42,
 	})
@@ -58,7 +59,7 @@ func TestBootstrapAbileneNoisy(t *testing.T) {
 		p.B.SetVec(i, p.B.AtVec(i)+float64(i%5)*0.5)
 	}
 
-	sol, err := tomo.Bootstrap(p, &tomo.NNLSSolver{}, tomo.BootstrapConfig{
+	sol, err := tomo.Bootstrap(context.Background(), p, &tomo.NNLSSolver{}, tomo.BootstrapConfig{
 		NumSamples: 50,
 		Seed:       123,
 	})
@@ -95,11 +96,11 @@ func TestBootstrapDeterminism(t *testing.T) {
 
 	cfg := tomo.BootstrapConfig{NumSamples: 50, Seed: 99}
 
-	sol1, err := tomo.Bootstrap(p, &tomo.NNLSSolver{}, cfg)
+	sol1, err := tomo.Bootstrap(context.Background(), p, &tomo.NNLSSolver{}, cfg)
 	if err != nil {
 		t.Fatalf("Bootstrap run 1: %v", err)
 	}
-	sol2, err := tomo.Bootstrap(p, &tomo.NNLSSolver{}, cfg)
+	sol2, err := tomo.Bootstrap(context.Background(), p, &tomo.NNLSSolver{}, cfg)
 	if err != nil {
 		t.Fatalf("Bootstrap run 2: %v", err)
 	}
@@ -117,7 +118,7 @@ func TestBootstrapSingleSample(t *testing.T) {
 	groundTruth := []float64{5.0, 3.0, 7.0}
 	p := buildTriangleProblem(t, groundTruth)
 
-	sol, err := tomo.Bootstrap(p, &tomo.NNLSSolver{}, tomo.BootstrapConfig{
+	sol, err := tomo.Bootstrap(context.Background(), p, &tomo.NNLSSolver{}, tomo.BootstrapConfig{
 		NumSamples: 1,
 		Seed:       1,
 	})

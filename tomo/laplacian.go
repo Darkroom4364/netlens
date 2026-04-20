@@ -1,6 +1,7 @@
 package tomo
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"time"
@@ -16,7 +17,7 @@ type LaplacianSolver struct {
 
 func (s *LaplacianSolver) Name() string { return "laplacian" }
 
-func (s *LaplacianSolver) Solve(p *Problem) (*Solution, error) {
+func (s *LaplacianSolver) Solve(ctx context.Context, p *Problem) (*Solution, error) {
 	if p == nil || p.A == nil || p.B == nil {
 		return nil, fmt.Errorf("%s: nil problem, routing matrix, or measurement vector", s.Name())
 	}

@@ -1,6 +1,7 @@
 package tomo
 
 import (
+	"context"
 	"math"
 	"testing"
 
@@ -22,7 +23,7 @@ func TestVardiEM_Triangle(t *testing.T) {
 	b := mat.NewVecDense(3, []float64{30, 50, 40})
 
 	p := &Problem{A: A, B: b}
-	sol, err := (&VardiEMSolver{}).Solve(p)
+	sol, err := (&VardiEMSolver{}).Solve(context.Background(), p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +52,7 @@ func TestVardiEM_Chain(t *testing.T) {
 	b := mat.NewVecDense(3, []float64{5, 15, 30})
 
 	p := &Problem{A: A, B: b}
-	sol, err := (&VardiEMSolver{}).Solve(p)
+	sol, err := (&VardiEMSolver{}).Solve(context.Background(), p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +77,7 @@ func TestVardiEM_NonNegative(t *testing.T) {
 	b := mat.NewVecDense(4, []float64{2, 3, 1, 5})
 
 	p := &Problem{A: A, B: b}
-	sol, err := (&VardiEMSolver{}).Solve(p)
+	sol, err := (&VardiEMSolver{}).Solve(context.Background(), p)
 	if err != nil {
 		t.Fatal(err)
 	}

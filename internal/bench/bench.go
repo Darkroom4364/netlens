@@ -1,6 +1,7 @@
 package bench
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"sort"
@@ -30,7 +31,7 @@ type BenchResult struct {
 }
 
 // RunBenchmark runs all solvers on a loaded topology with simulation.
-func RunBenchmark(topoName string, g *topology.Graph, solvers []tomo.Solver, cfg measure.SimConfig) ([]BenchResult, error) {
+func RunBenchmark(ctx context.Context, topoName string, g *topology.Graph, solvers []tomo.Solver, cfg measure.SimConfig) ([]BenchResult, error) {
 	sim, err := measure.Simulate(g, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("simulate %s: %w", topoName, err)
@@ -38,7 +39,7 @@ func RunBenchmark(topoName string, g *topology.Graph, solvers []tomo.Solver, cfg
 
 	var results []BenchResult
 	for _, solver := range solvers {
-		sol, err := solver.Solve(sim.Problem)
+		sol, err := solver.Solve(ctx, sim.Problem)
 		if err != nil {
 			return nil, fmt.Errorf("solver %s on %s: %w", solver.Name(), topoName, err)
 		}

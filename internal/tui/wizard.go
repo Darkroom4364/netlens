@@ -157,7 +157,7 @@ func loadSimulateCmd(ctx context.Context, progCh chan<- string, topoPath string,
 
 		solvers := allSolvers()
 		progCh <- fmt.Sprintf("Solving with %s...", solvers[solverIdx].Name())
-		sol, err := solvers[solverIdx].Solve(sim.Problem)
+		sol, err := solvers[solverIdx].Solve(ctx, sim.Problem)
 		if err != nil {
 			return loadResultMsg{err: fmt.Errorf("solve: %w", err)}
 		}
@@ -255,7 +255,7 @@ func buildFromMeasurements(ctx context.Context, progCh chan<- string, measuremen
 
 	solvers := allSolvers()
 	progCh <- fmt.Sprintf("Solving with %s...", solvers[solverIdx].Name())
-	sol, err := solvers[solverIdx].Solve(problem)
+	sol, err := solvers[solverIdx].Solve(ctx, problem)
 	if err != nil {
 		return loadResultMsg{err: fmt.Errorf("solve: %w", err)}
 	}

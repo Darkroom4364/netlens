@@ -1,6 +1,7 @@
 package tomo
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"testing"
@@ -72,7 +73,7 @@ func runAllSolvers(t *testing.T, label string, p *Problem) {
 					t.Fatalf("PANIC in %s: %v", solver.Name(), r)
 				}
 			}()
-			sol, err := solver.Solve(p)
+			sol, err := solver.Solve(context.Background(), p)
 			assertSolution(t, solver.Name(), sol, err, n)
 		})
 	}
@@ -307,7 +308,7 @@ func TestEdge_NaNInMeasurements(t *testing.T) {
 					t.Fatalf("PANIC in %s with NaN input: %v", solver.Name(), r)
 				}
 			}()
-			sol, err := solver.Solve(p)
+			sol, err := solver.Solve(context.Background(), p)
 			// Either an error or a solution is fine; we just must not panic.
 			if err != nil {
 				t.Logf("%s returned error with NaN (acceptable): %v", solver.Name(), err)
@@ -343,7 +344,7 @@ func TestEdge_InfInMeasurements(t *testing.T) {
 					t.Fatalf("PANIC in %s with Inf input: %v", solver.Name(), r)
 				}
 			}()
-			sol, err := solver.Solve(p)
+			sol, err := solver.Solve(context.Background(), p)
 			if err != nil {
 				t.Logf("%s returned error with Inf (acceptable): %v", solver.Name(), err)
 				return

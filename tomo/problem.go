@@ -1,6 +1,7 @@
 package tomo
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -84,7 +85,7 @@ type Solution struct {
 // Solve must not mutate receiver state.
 type Solver interface {
 	Name() string
-	Solve(p *Problem) (*Solution, error)
+	Solve(ctx context.Context, p *Problem) (*Solution, error)
 }
 
 // identifiabilityMask builds a per-link boolean slice from the quality analysis.

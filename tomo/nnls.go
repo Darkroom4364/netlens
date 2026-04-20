@@ -1,6 +1,7 @@
 package tomo
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"time"
@@ -19,7 +20,7 @@ type NNLSSolver struct {
 
 func (s *NNLSSolver) Name() string { return "nnls" }
 
-func (s *NNLSSolver) Solve(p *Problem) (*Solution, error) {
+func (s *NNLSSolver) Solve(ctx context.Context, p *Problem) (*Solution, error) {
 	if p == nil || p.A == nil || p.B == nil {
 		return nil, fmt.Errorf("%s: nil problem, routing matrix, or measurement vector", s.Name())
 	}
@@ -31,7 +32,7 @@ func (s *NNLSSolver) Solve(p *Problem) (*Solution, error) {
 		maxIter = 3 * n
 	}
 
-	x, iters, err := lawsonHanson(p.A, p.B, n, m, maxIter)
+	x, iters, err := lawsonHanson(ctx, p.A, p.B, n, m, maxIter)
 	if err != nil {
 		return nil, fmt.Errorf("nnls: %w", err)
 	}
@@ -43,7 +44,7 @@ func (s *NNLSSolver) Solve(p *Problem) (*Solution, error) {
 
 // lawsonHanson implements the Lawson-Hanson NNLS algorithm.
 // Reference: Lawson & Hanson, "Solving Least Squares Problems", 1974, Chapter 23.
-func lawsonHanson(A *mat.Dense, b *mat.VecDense, n, m, maxIter int) (*mat.VecDense, int, error) {
+func lawsonHanson(ctx context.Context, A *mat.Dense, b *mat.VecDense, n, m, maxIter int) (*mat.VecDense, int, error) {
 	x := mat.NewVecDense(n, nil)
 
 	// P = passive set (indices where x > 0, unconstrained)
@@ -56,6 +57,11 @@ func lawsonHanson(A *mat.Dense, b *mat.VecDense, n, m, maxIter int) (*mat.VecDen
 
 	iter := 0
 	for iter < maxIter {
+		select {
+		case <-ctx.Done():
+			return nil, 0, ctx.Err()
+		default:
+		}
 		// Find the maximum w[j] for j in Z (zero set)
 		maxW := math.Inf(-1)
 		maxJ := -1

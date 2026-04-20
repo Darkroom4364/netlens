@@ -1,6 +1,7 @@
 package tomo
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"time"
@@ -18,7 +19,7 @@ type VardiEMSolver struct {
 
 func (s *VardiEMSolver) Name() string { return "vardi-em" }
 
-func (s *VardiEMSolver) Solve(p *Problem) (*Solution, error) {
+func (s *VardiEMSolver) Solve(ctx context.Context, p *Problem) (*Solution, error) {
 	if p == nil || p.A == nil || p.B == nil {
 		return nil, fmt.Errorf("%s: nil problem, routing matrix, or measurement vector", s.Name())
 	}
@@ -75,6 +76,11 @@ func (s *VardiEMSolver) Solve(p *Problem) (*Solution, error) {
 	var skippedZeroDenom int
 	var iter int
 	for iter = 0; iter < maxIter; iter++ {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
 		for j := range xNew {
 			xNew[j] = 0
 			count[j] = 0

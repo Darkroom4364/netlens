@@ -1,6 +1,7 @@
 package tomo
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"math/rand"
@@ -89,7 +90,7 @@ func TestNumerical_ADMMLambdaZero(t *testing.T) {
 				t.Fatalf("PANIC: %v", r)
 			}
 		}()
-		sol, err := solver.Solve(p)
+		sol, err := solver.Solve(context.Background(), p)
 		assertSolution(t, "admm-lambda0", sol, err, 3)
 	})
 }
@@ -108,7 +109,7 @@ func TestNumerical_ADMMRhoTiny(t *testing.T) {
 				t.Fatalf("PANIC: %v", r)
 			}
 		}()
-		sol, err := solver.Solve(p)
+		sol, err := solver.Solve(context.Background(), p)
 		assertSolution(t, "admm-rho-tiny", sol, err, 3)
 	})
 }
@@ -127,7 +128,7 @@ func TestNumerical_ADMMRhoHuge(t *testing.T) {
 				t.Fatalf("PANIC: %v", r)
 			}
 		}()
-		sol, err := solver.Solve(p)
+		sol, err := solver.Solve(context.Background(), p)
 		assertSolution(t, "admm-rho-huge", sol, err, 3)
 	})
 }
@@ -146,7 +147,7 @@ func TestNumerical_VardiToleranceZero(t *testing.T) {
 				t.Fatalf("PANIC: %v", r)
 			}
 		}()
-		sol, err := solver.Solve(p)
+		sol, err := solver.Solve(context.Background(), p)
 		assertSolution(t, "vardi-tol0", sol, err, 3)
 	})
 }
@@ -172,7 +173,7 @@ func TestNumerical_VardiAllInitialZero(t *testing.T) {
 				t.Fatalf("PANIC: %v", r)
 			}
 		}()
-		sol, err := solver.Solve(p)
+		sol, err := solver.Solve(context.Background(), p)
 		assertSolution(t, "vardi-zero-cols", sol, err, n)
 	})
 }
@@ -191,8 +192,8 @@ func TestNumerical_SolverDeterminism(t *testing.T) {
 					t.Fatalf("PANIC: %v", r)
 				}
 			}()
-			sol1, err1 := solver.Solve(p)
-			sol2, err2 := solver.Solve(p)
+			sol1, err1 := solver.Solve(context.Background(), p)
+			sol2, err2 := solver.Solve(context.Background(), p)
 
 			if err1 != nil || err2 != nil {
 				t.Logf("solver returned error (skipping determinism check): err1=%v err2=%v", err1, err2)
@@ -227,7 +228,7 @@ func TestNumerical_QualityNil(t *testing.T) {
 					t.Fatalf("PANIC in %s with nil Quality: %v", solver.Name(), r)
 				}
 			}()
-			sol, err := solver.Solve(p)
+			sol, err := solver.Solve(context.Background(), p)
 			if err != nil {
 				t.Logf("%s returned error with nil Quality (acceptable): %v", solver.Name(), err)
 				return
@@ -260,13 +261,13 @@ func TestNumerical_SequentialSolversSameProblem(t *testing.T) {
 	}
 
 	tik := &TikhonovSolver{Lambda: 0.01}
-	_, err := tik.Solve(p)
+	_, err := tik.Solve(context.Background(), p)
 	if err != nil {
 		t.Fatalf("Tikhonov solve failed: %v", err)
 	}
 
 	nnls := &NNLSSolver{MaxIter: 1000}
-	sol2, err := nnls.Solve(p)
+	sol2, err := nnls.Solve(context.Background(), p)
 	if err != nil {
 		t.Fatalf("NNLS solve failed: %v", err)
 	}
@@ -303,7 +304,7 @@ func TestNumerical_Bootstrap2Paths(t *testing.T) {
 		}
 	}()
 
-	sol, err := Bootstrap(p, solver, cfg)
+	sol, err := Bootstrap(context.Background(), p, solver, cfg)
 	if err != nil {
 		t.Fatalf("Bootstrap: %v", err)
 	}
@@ -329,11 +330,11 @@ func TestNumerical_BootstrapSeedDeterminism(t *testing.T) {
 	solver := &NNLSSolver{MaxIter: 1000}
 	cfg := BootstrapConfig{NumSamples: 50, Seed: 999}
 
-	sol1, err := Bootstrap(p, solver, cfg)
+	sol1, err := Bootstrap(context.Background(), p, solver, cfg)
 	if err != nil {
 		t.Fatalf("Bootstrap run 1: %v", err)
 	}
-	sol2, err := Bootstrap(p, solver, cfg)
+	sol2, err := Bootstrap(context.Background(), p, solver, cfg)
 	if err != nil {
 		t.Fatalf("Bootstrap run 2: %v", err)
 	}
@@ -367,7 +368,7 @@ func TestNumerical_TomogravityGravityPriorAllZeros(t *testing.T) {
 				t.Fatalf("PANIC: %v", r)
 			}
 		}()
-		sol, err := solver.Solve(p)
+		sol, err := solver.Solve(context.Background(), p)
 		assertSolution(t, "tomogravity-zero", sol, err, n)
 		if err == nil && sol != nil {
 			// All estimates should be zero or near-zero.
@@ -395,7 +396,7 @@ func TestNumerical_TomogravityGravityPriorAllZeros(t *testing.T) {
 				t.Fatalf("PANIC: %v", r)
 			}
 		}()
-		sol, err := solver.Solve(p2)
+		sol, err := solver.Solve(context.Background(), p2)
 		assertSolution(t, "tomogravity-uncovered", sol, err, 5)
 	})
 }

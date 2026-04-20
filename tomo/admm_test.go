@@ -1,6 +1,7 @@
 package tomo_test
 
 import (
+	"context"
 	"math"
 	"testing"
 
@@ -25,7 +26,7 @@ func TestADMMTriangle(t *testing.T) {
 	}
 
 	solver := &tomo.ADMMSolver{}
-	sol, err := solver.Solve(p)
+	sol, err := solver.Solve(context.Background(), p)
 	if err != nil {
 		t.Fatalf("Solve: %v", err)
 	}
@@ -54,7 +55,7 @@ func TestADMMChain(t *testing.T) {
 	}
 
 	solver := &tomo.ADMMSolver{}
-	sol, err := solver.Solve(p)
+	sol, err := solver.Solve(context.Background(), p)
 	if err != nil {
 		t.Fatalf("Solve: %v", err)
 	}
@@ -86,7 +87,7 @@ func TestADMMSparsity(t *testing.T) {
 	}
 
 	solver := &tomo.ADMMSolver{}
-	sol, err := solver.Solve(p)
+	sol, err := solver.Solve(context.Background(), p)
 	if err != nil {
 		t.Fatalf("Solve: %v", err)
 	}
@@ -126,7 +127,7 @@ func TestADMMCholeskyRetry(t *testing.T) {
 
 	p := &tomo.Problem{A: A, B: b}
 	solver := &tomo.ADMMSolver{}
-	sol, err := solver.Solve(p)
+	sol, err := solver.Solve(context.Background(), p)
 	if err != nil {
 		t.Fatalf("Solve should succeed with Cholesky retry: %v", err)
 	}

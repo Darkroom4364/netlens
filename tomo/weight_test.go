@@ -1,6 +1,7 @@
 package tomo
 
 import (
+	"context"
 	"math"
 	"testing"
 	"time"
@@ -122,7 +123,7 @@ func TestWeight_BuildProblem_AllZeroMinRTT(t *testing.T) {
 
 	// Solver should still work.
 	solver := &TikhonovSolver{Lambda: 0.01}
-	sol, err := solver.Solve(p)
+	sol, err := solver.Solve(context.Background(), p)
 	if err != nil {
 		t.Logf("solver error (acceptable): %v", err)
 		return

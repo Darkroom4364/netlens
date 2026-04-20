@@ -1,6 +1,7 @@
 package tomo
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"time"
@@ -19,7 +20,7 @@ type TomogravitySolver struct {
 
 func (s *TomogravitySolver) Name() string { return "tomogravity" }
 
-func (s *TomogravitySolver) Solve(p *Problem) (*Solution, error) {
+func (s *TomogravitySolver) Solve(ctx context.Context, p *Problem) (*Solution, error) {
 	if p == nil || p.A == nil || p.B == nil {
 		return nil, fmt.Errorf("%s: nil problem, routing matrix, or measurement vector", s.Name())
 	}

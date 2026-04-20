@@ -12,5 +12,5 @@
 //	import "github.com/Darkroom4364/netlens/tomo"
 //
 //	p, _ := tomo.BuildProblemFromTopology(topo, groundTruth)
-//	sol, _ := (&tomo.NNLSSolver{}).Solve(p)
+//	sol, _ := (&tomo.NNLSSolver{}).Solve(ctx, p)
 package tomo

@@ -1,6 +1,7 @@
 package tomo
 
 import (
+	"context"
 	"math"
 	"testing"
 
@@ -19,7 +20,7 @@ func TestTomogravityTriangle(t *testing.T) {
 	b := mat.NewVecDense(3, []float64{3.0, 5.0, 4.0}) // A * truth
 
 	solver := &TomogravitySolver{Lambda: 1e-6}
-	sol, err := solver.Solve(&Problem{A: A, B: b})
+	sol, err := solver.Solve(context.Background(), &Problem{A: A, B: b})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +47,7 @@ func TestTomogravityChain(t *testing.T) {
 	b := mat.NewVecDense(3, []float64{1.0, 3.0, 6.0})
 
 	solver := &TomogravitySolver{Lambda: 1e-6}
-	sol, err := solver.Solve(&Problem{A: A, B: b})
+	sol, err := solver.Solve(context.Background(), &Problem{A: A, B: b})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +68,7 @@ func TestTomogravityNonNegative(t *testing.T) {
 	b := mat.NewVecDense(2, []float64{0.5, 3.0}) // would push link 1 negative
 
 	solver := &TomogravitySolver{}
-	sol, err := solver.Solve(&Problem{A: A, B: b})
+	sol, err := solver.Solve(context.Background(), &Problem{A: A, B: b})
 	if err != nil {
 		t.Fatal(err)
 	}

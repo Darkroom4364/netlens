@@ -65,7 +65,7 @@ configurable noise, runs every solver, and produces a comparison table.`,
 					"waxman-50": topology.Waxman(50, 0.5, 0.5, seed),
 				}
 				for name, g := range syntheticTopos {
-					results, err := bench.RunBenchmark(name, g, solvers, cfg)
+					results, err := bench.RunBenchmark(cmd.Context(), name, g, solvers, cfg)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "warning: %s: %v\n", name, err)
 						continue
@@ -91,7 +91,7 @@ configurable noise, runs every solver, and produces a comparison table.`,
 					}
 
 					name := strings.TrimSuffix(filepath.Base(f), ".graphml")
-					results, err := bench.RunBenchmark(name, g, solvers, cfg)
+					results, err := bench.RunBenchmark(cmd.Context(), name, g, solvers, cfg)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "warning: %s: %v\n", name, err)
 						continue

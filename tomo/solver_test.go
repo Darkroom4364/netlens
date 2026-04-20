@@ -1,6 +1,7 @@
 package tomo_test
 
 import (
+	"context"
 	"math"
 	"testing"
 
@@ -58,7 +59,7 @@ func TestSolversTriangle(t *testing.T) {
 
 	for _, solver := range solvers {
 		t.Run(solver.Name(), func(t *testing.T) {
-			sol, err := solver.Solve(p)
+			sol, err := solver.Solve(context.Background(), p)
 			if err != nil {
 				t.Fatalf("Solve: %v", err)
 			}
@@ -92,7 +93,7 @@ func TestSolversChain(t *testing.T) {
 
 	for _, solver := range solvers {
 		t.Run(solver.Name(), func(t *testing.T) {
-			sol, err := solver.Solve(p)
+			sol, err := solver.Solve(context.Background(), p)
 			if err != nil {
 				t.Fatalf("Solve: %v", err)
 			}
@@ -139,7 +140,7 @@ func TestSolversAbilene(t *testing.T) {
 
 	for _, solver := range solvers {
 		t.Run(solver.Name(), func(t *testing.T) {
-			sol, err := solver.Solve(p)
+			sol, err := solver.Solve(context.Background(), p)
 			if err != nil {
 				t.Fatalf("Solve: %v", err)
 			}
@@ -180,7 +181,7 @@ func TestNNLSNonNegativity(t *testing.T) {
 	p := &tomo.Problem{A: A, B: b, Quality: quality}
 
 	solver := &tomo.NNLSSolver{}
-	sol, err := solver.Solve(p)
+	sol, err := solver.Solve(context.Background(), p)
 	if err != nil {
 		t.Fatalf("Solve: %v", err)
 	}

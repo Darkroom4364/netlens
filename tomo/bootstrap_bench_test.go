@@ -1,6 +1,7 @@
 package tomo_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Darkroom4364/netlens/tomo"
@@ -25,7 +26,7 @@ func BenchmarkBootstrap_Abilene(b *testing.B) {
 	solver := &tomo.NNLSSolver{}
 	b.ResetTimer()
 	for range b.N {
-		_, err := tomo.Bootstrap(p, solver, cfg)
+		_, err := tomo.Bootstrap(context.Background(), p, solver, cfg)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -50,7 +51,7 @@ func BenchmarkBootstrap_Chinanet(b *testing.B) {
 	solver := &tomo.NNLSSolver{}
 	b.ResetTimer()
 	for range b.N {
-		_, err := tomo.Bootstrap(p, solver, cfg)
+		_, err := tomo.Bootstrap(context.Background(), p, solver, cfg)
 		if err != nil {
 			b.Fatal(err)
 		}

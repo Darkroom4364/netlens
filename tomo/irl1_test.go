@@ -1,6 +1,7 @@
 package tomo
 
 import (
+	"context"
 	"math"
 	"testing"
 
@@ -18,7 +19,7 @@ func TestIRL1_Triangle(t *testing.T) {
 	b := mat.NewVecDense(3, nil)
 	b.MulVec(A, mat.NewVecDense(3, truth))
 
-	sol, err := (&IRL1Solver{}).Solve(&Problem{A: A, B: b})
+	sol, err := (&IRL1Solver{}).Solve(context.Background(), &Problem{A: A, B: b})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,11 +49,11 @@ func TestIRL1_Sparsity(t *testing.T) {
 	b := mat.NewVecDense(4, nil)
 	b.MulVec(A, mat.NewVecDense(5, truth))
 
-	solIRL1, err := (&IRL1Solver{}).Solve(&Problem{A: A, B: b})
+	solIRL1, err := (&IRL1Solver{}).Solve(context.Background(), &Problem{A: A, B: b})
 	if err != nil {
 		t.Fatal(err)
 	}
-	solADMM, err := (&ADMMSolver{}).Solve(&Problem{A: A, B: b})
+	solADMM, err := (&ADMMSolver{}).Solve(context.Background(), &Problem{A: A, B: b})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +80,7 @@ func TestIRL1_WeightsConverge(t *testing.T) {
 	b.MulVec(A, mat.NewVecDense(3, truth))
 
 	s := &IRL1Solver{MaxOuterIter: 10, Epsilon: 0.1}
-	sol, err := s.Solve(&Problem{A: A, B: b})
+	sol, err := s.Solve(context.Background(), &Problem{A: A, B: b})
 	if err != nil {
 		t.Fatal(err)
 	}

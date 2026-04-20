@@ -1,6 +1,7 @@
 package tomo
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"math/rand"
@@ -30,7 +31,7 @@ func (c *ConformalConfig) defaults() {
 // Conformal computes distribution-free prediction intervals via split
 // conformal prediction. Faster than bootstrap (single solve) with
 // finite-sample marginal coverage guarantee.
-func Conformal(p *Problem, solver Solver, cfg ConformalConfig) (*Solution, error) {
+func Conformal(ctx context.Context, p *Problem, solver Solver, cfg ConformalConfig) (*Solution, error) {
 	cfg.defaults()
 
 	m := p.NumPaths()
@@ -38,7 +39,7 @@ func Conformal(p *Problem, solver Solver, cfg ConformalConfig) (*Solution, error
 
 	if m < 2 {
 		// Degenerate: solve directly, infinite confidence.
-		sol, err := solver.Solve(p)
+		sol, err := solver.Solve(ctx, p)
 		if err != nil {
 			return nil, fmt.Errorf("solve: %w", err)
 		}
@@ -80,7 +81,7 @@ func Conformal(p *Problem, solver Solver, cfg ConformalConfig) (*Solution, error
 	}
 
 	// Step 3: solve on training set.
-	trainSol, err := solver.Solve(trainProblem)
+	trainSol, err := solver.Solve(ctx, trainProblem)
 	if err != nil {
 		return nil, fmt.Errorf("training solve: %w", err)
 	}
@@ -123,7 +124,7 @@ func Conformal(p *Problem, solver Solver, cfg ConformalConfig) (*Solution, error
 	}
 
 	// Step 7: solve on full problem, attach conformal confidence.
-	sol, err := solver.Solve(p)
+	sol, err := solver.Solve(ctx, p)
 	if err != nil {
 		return nil, fmt.Errorf("full solve: %w", err)
 	}

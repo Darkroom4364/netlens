@@ -1,6 +1,7 @@
 package tomo_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Darkroom4364/netlens/tomo"
@@ -24,7 +25,7 @@ func BenchmarkLaplacianAutoLambda_Abilene(b *testing.B) {
 	solver := &tomo.LaplacianSolver{} // Lambda=0 triggers auto-select
 	b.ResetTimer()
 	for range b.N {
-		_, err := solver.Solve(p)
+		_, err := solver.Solve(context.Background(), p)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -48,7 +49,7 @@ func BenchmarkLaplacianAutoLambda_Chinanet(b *testing.B) {
 	solver := &tomo.LaplacianSolver{}
 	b.ResetTimer()
 	for range b.N {
-		_, err := solver.Solve(p)
+		_, err := solver.Solve(context.Background(), p)
 		if err != nil {
 			b.Fatal(err)
 		}

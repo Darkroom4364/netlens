@@ -1,6 +1,7 @@
 package tomo
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"time"
@@ -21,7 +22,7 @@ type ADMMSolver struct {
 
 func (s *ADMMSolver) Name() string { return "admm" }
 
-func (s *ADMMSolver) Solve(p *Problem) (*Solution, error) {
+func (s *ADMMSolver) Solve(ctx context.Context, p *Problem) (*Solution, error) {
 	if p == nil || p.A == nil || p.B == nil {
 		return nil, fmt.Errorf("%s: nil problem, routing matrix, or measurement vector", s.Name())
 	}
@@ -100,6 +101,11 @@ func (s *ADMMSolver) Solve(p *Problem) (*Solution, error) {
 	iters := 0
 
 	for k := 0; k < maxIter; k++ {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
 		iters = k + 1
 
 		// x-update: x = (AᵀA + ρI)⁻¹(Aᵀb + ρ(z - u))

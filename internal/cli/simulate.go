@@ -74,7 +74,7 @@ the known ground truth.`,
 			if err != nil {
 				return err
 			}
-			sol, err := solver.Solve(sim.Problem)
+			sol, err := solver.Solve(cmd.Context(), sim.Problem)
 			if err != nil {
 				return fmt.Errorf("solve: %w", err)
 			}

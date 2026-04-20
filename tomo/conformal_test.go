@@ -1,6 +1,7 @@
 package tomo_test
 
 import (
+	"context"
 	"math"
 	"math/rand"
 	"testing"
@@ -13,7 +14,7 @@ func TestConformalTriangleNoiseFree(t *testing.T) {
 	groundTruth := []float64{5.0, 3.0, 7.0}
 	p := buildTriangleProblem(t, groundTruth)
 
-	sol, err := tomo.Conformal(p, &tomo.NNLSSolver{}, tomo.ConformalConfig{Seed: 42})
+	sol, err := tomo.Conformal(context.Background(), p, &tomo.NNLSSolver{}, tomo.ConformalConfig{Seed: 42})
 	if err != nil {
 		t.Fatalf("Conformal: %v", err)
 	}
@@ -47,7 +48,7 @@ func TestConformalAbileneNoisy(t *testing.T) {
 		p.B.SetVec(i, p.B.AtVec(i)+float64(i%5)*0.5)
 	}
 
-	sol, err := tomo.Conformal(p, &tomo.NNLSSolver{}, tomo.ConformalConfig{Seed: 123})
+	sol, err := tomo.Conformal(context.Background(), p, &tomo.NNLSSolver{}, tomo.ConformalConfig{Seed: 123})
 	if err != nil {
 		t.Fatalf("Conformal: %v", err)
 	}
@@ -86,7 +87,7 @@ func TestConformalCoverageGuarantee(t *testing.T) {
 		for i := 0; i < p.NumPaths(); i++ {
 			p.B.SetVec(i, p.B.AtVec(i)+rng.NormFloat64()*0.5)
 		}
-		sol, err := tomo.Conformal(p, &tomo.NNLSSolver{}, tomo.ConformalConfig{
+		sol, err := tomo.Conformal(context.Background(), p, &tomo.NNLSSolver{}, tomo.ConformalConfig{
 			Alpha: alpha, Seed: int64(trial + 1),
 		})
 		if err != nil {
@@ -118,13 +119,13 @@ func TestConformalCalibrationFrac(t *testing.T) {
 	groundTruth := []float64{5.0, 3.0, 7.0}
 	p := buildTriangleProblem(t, groundTruth)
 
-	sol02, err := tomo.Conformal(p, &tomo.NNLSSolver{}, tomo.ConformalConfig{
+	sol02, err := tomo.Conformal(context.Background(), p, &tomo.NNLSSolver{}, tomo.ConformalConfig{
 		CalibrationFrac: 0.2, Seed: 7,
 	})
 	if err != nil {
 		t.Fatalf("frac=0.2: %v", err)
 	}
-	sol05, err := tomo.Conformal(p, &tomo.NNLSSolver{}, tomo.ConformalConfig{
+	sol05, err := tomo.Conformal(context.Background(), p, &tomo.NNLSSolver{}, tomo.ConformalConfig{
 		CalibrationFrac: 0.5, Seed: 7,
 	})
 	if err != nil {
@@ -156,7 +157,7 @@ func TestConformalDegeneratetwoPaths(t *testing.T) {
 		t.Fatalf("BuildProblem: %v", err)
 	}
 
-	sol, err := tomo.Conformal(p, &tomo.NNLSSolver{}, tomo.ConformalConfig{Seed: 1})
+	sol, err := tomo.Conformal(context.Background(), p, &tomo.NNLSSolver{}, tomo.ConformalConfig{Seed: 1})
 	if err != nil {
 		t.Fatalf("Conformal: %v", err)
 	}

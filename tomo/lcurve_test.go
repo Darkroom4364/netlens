@@ -1,6 +1,7 @@
 package tomo_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Darkroom4364/netlens/tomo"
@@ -20,7 +21,7 @@ func TestLCurveAbilene(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildProblemFromTopology: %v", err)
 	}
-	sol, err := (&tomo.TikhonovSolver{LambdaMethod: "lcurve"}).Solve(p)
+	sol, err := (&tomo.TikhonovSolver{LambdaMethod: "lcurve"}).Solve(context.Background(), p)
 	if err != nil {
 		t.Fatalf("Solve: %v", err)
 	}
@@ -33,8 +34,8 @@ func TestLCurveAbilene(t *testing.T) {
 
 func TestLCurveVsGCV(t *testing.T) {
 	p := buildTriangleProblem(t, []float64{5.0, 3.0, 7.0})
-	gcv, _ := (&tomo.TikhonovSolver{LambdaMethod: "gcv"}).Solve(p)
-	lc, _ := (&tomo.TikhonovSolver{LambdaMethod: "lcurve"}).Solve(p)
+	gcv, _ := (&tomo.TikhonovSolver{LambdaMethod: "gcv"}).Solve(context.Background(), p)
+	lc, _ := (&tomo.TikhonovSolver{LambdaMethod: "lcurve"}).Solve(context.Background(), p)
 	lamGCV := gcv.Metadata["lambda"].(float64)
 	lamLC := lc.Metadata["lambda"].(float64)
 	t.Logf("GCV=%.6e  L-curve=%.6e", lamGCV, lamLC)

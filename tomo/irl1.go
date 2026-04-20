@@ -1,6 +1,7 @@
 package tomo
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"time"
@@ -21,7 +22,7 @@ type IRL1Solver struct {
 
 func (s *IRL1Solver) Name() string { return "irl1" }
 
-func (s *IRL1Solver) Solve(p *Problem) (*Solution, error) {
+func (s *IRL1Solver) Solve(ctx context.Context, p *Problem) (*Solution, error) {
 	if p == nil || p.A == nil || p.B == nil {
 		return nil, fmt.Errorf("%s: nil problem, routing matrix, or measurement vector", s.Name())
 	}
@@ -91,6 +92,11 @@ func (s *IRL1Solver) Solve(p *Problem) (*Solution, error) {
 	for outer := 0; outer < outerIter; outer++ {
 		outerUsed = outer + 1
 		for k := 0; k < innerIter; k++ {
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			default:
+			}
 			totalIters++
 			// x-update
 			for i := 0; i < n; i++ {

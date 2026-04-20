@@ -196,7 +196,7 @@ func (m Model) updateDashboard(msg tea.Msg) (Model, tea.Cmd) {
 				solver := m.currentSolver()
 				p := m.problem
 				return m, func() tea.Msg {
-					sol, err := solver.Solve(p)
+					sol, err := solver.Solve(context.Background(), p)
 					return solveResultMsg{sol, err}
 				}
 			}
@@ -217,7 +217,7 @@ func (m Model) updateDashboard(msg tea.Msg) (Model, tea.Cmd) {
 			p := m.problem
 			return m, tea.Batch(
 				func() tea.Msg {
-					sol, err := solver.Solve(p)
+					sol, err := solver.Solve(context.Background(), p)
 					return solveResultMsg{sol, err}
 				},
 				tea.Tick(m.refreshRate, func(t time.Time) tea.Msg { return tickMsg(t) }),

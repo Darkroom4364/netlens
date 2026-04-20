@@ -38,11 +38,11 @@ type bootstrapBuf struct {
 
 // Bootstrap runs bootstrap resampling and returns the original solution
 // with Confidence field populated (half-width of CI per link).
-func Bootstrap(p *Problem, solver Solver, cfg BootstrapConfig) (*Solution, error) {
+func Bootstrap(ctx context.Context, p *Problem, solver Solver, cfg BootstrapConfig) (*Solution, error) {
 	cfg.defaults()
 
 	// Solve original problem.
-	sol, err := solver.Solve(p)
+	sol, err := solver.Solve(ctx, p)
 	if err != nil {
 		return nil, fmt.Errorf("base solve: %w", err)
 	}
@@ -88,7 +88,7 @@ func Bootstrap(p *Problem, solver Solver, cfg BootstrapConfig) (*Solution, error
 	var failedSamples atomic.Int64
 	samples := make([][]float64, cfg.NumSamples)
 
-	g, _ := errgroup.WithContext(context.Background())
+	g, gctx := errgroup.WithContext(ctx)
 	g.SetLimit(numWorkers)
 
 	for b := 0; b < cfg.NumSamples; b++ {
@@ -122,7 +122,7 @@ func Bootstrap(p *Problem, solver Solver, cfg BootstrapConfig) (*Solution, error
 				// and skipping AnalyzeQuality avoids a full SVD per sample.
 			}
 
-			bSol, err := solver.Solve(bp)
+			bSol, err := solver.Solve(gctx, bp)
 			if err != nil {
 				failedSamples.Add(1)
 				return nil
