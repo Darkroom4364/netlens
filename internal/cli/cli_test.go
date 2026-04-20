@@ -386,11 +386,9 @@ TEST_NETLENS_QUOTED="hello world"
 	if err := os.Chdir(dir); err != nil {
 		t.Fatalf("failed to chdir: %v", err)
 	}
-	defer func() {
-		_ = os.Chdir(origDir)
-		os.Unsetenv("TEST_NETLENS_FOO")
-		os.Unsetenv("TEST_NETLENS_QUOTED")
-	}()
+	t.Setenv("TEST_NETLENS_FOO", "")
+	t.Setenv("TEST_NETLENS_QUOTED", "")
+	defer func() { _ = os.Chdir(origDir) }()
 
 	_, _ = executeCommand("version")
 
@@ -485,14 +483,17 @@ func TestCLI_PrintScanTable(t *testing.T) {
 
 	// Capture stdout (printScanTable uses fmt.Printf).
 	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
 	os.Stdout = w
 
 	printScanTable(p, sol, 0, false)
 
-	w.Close()
+	_ = w.Close()
 	captured, _ := io.ReadAll(r)
-	r.Close()
+	_ = r.Close()
 	os.Stdout = oldStdout
 
 	out := string(captured)
@@ -526,14 +527,17 @@ func TestCLI_PrintScanTableWithTop(t *testing.T) {
 	}
 
 	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
 	os.Stdout = w
 
 	printScanTable(p, sol, 1, true) // top=1, quiet=true
 
-	w.Close()
+	_ = w.Close()
 	captured, _ := io.ReadAll(r)
-	r.Close()
+	_ = r.Close()
 	os.Stdout = oldStdout
 
 	out := string(captured)
@@ -662,10 +666,8 @@ func TestCLI_LoadDotEnvSingleQuoted(t *testing.T) {
 	if err := os.Chdir(dir); err != nil {
 		t.Fatalf("failed to chdir: %v", err)
 	}
-	defer func() {
-		_ = os.Chdir(origDir)
-		os.Unsetenv("TEST_NETLENS_SQ")
-	}()
+	t.Setenv("TEST_NETLENS_SQ", "")
+	defer func() { _ = os.Chdir(origDir) }()
 
 	_, _ = executeCommand("version")
 

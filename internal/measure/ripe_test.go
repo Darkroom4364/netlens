@@ -345,22 +345,22 @@ func TestParseRetryAfter(t *testing.T) {
 }
 
 func TestPaginatedSearch(t *testing.T) {
-	page := 0
+	var page atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		page++
+		p := int(page.Add(1))
 		w.Header().Set("Content-Type", "application/json")
 
-		item1, _ := json.Marshal(MeasurementInfo{ID: page*10 + 1, Description: "item1"})
-		item2, _ := json.Marshal(MeasurementInfo{ID: page*10 + 2, Description: "item2"})
+		item1, _ := json.Marshal(MeasurementInfo{ID: p*10 + 1, Description: "item1"})
+		item2, _ := json.Marshal(MeasurementInfo{ID: p*10 + 2, Description: "item2"})
 
 		var nextURL string
-		if page == 1 {
+		if p == 1 {
 			nextURL = fmt.Sprintf(`"http://%s/measurements/?page=2"`, r.Host)
 		}
 
 		resp := fmt.Sprintf(`{"count":4,"next":%s,"previous":null,"results":[%s,%s]}`,
 			func() string {
-				if page == 1 {
+				if p == 1 {
 					return nextURL
 				}
 				return "null"
