@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
+	"runtime/pprof"
 	"strings"
 
 	"github.com/Darkroom4364/netlens/internal/bench"
@@ -22,6 +24,8 @@ func newBenchmarkCmd() *cobra.Command {
 		congestionFactor float64
 		seed             int64
 		synthetic        bool
+		cpuProfile       string
+		memProfile       string
 	)
 
 	cmd := &cobra.Command{
@@ -33,6 +37,18 @@ configurable noise, runs every solver, and produces a comparison table.`,
   netlens benchmark --synthetic --noise 0.2
   netlens benchmark -t ./topos --congestion-links 5 --seed 0`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if cpuProfile != "" {
+				f, err := os.Create(cpuProfile)
+				if err != nil {
+					return fmt.Errorf("create CPU profile: %w", err)
+				}
+				defer f.Close()
+				if err := pprof.StartCPUProfile(f); err != nil {
+					return fmt.Errorf("start CPU profile: %w", err)
+				}
+				defer pprof.StopCPUProfile()
+			}
+
 			cfg := measure.SimConfig{
 				NoiseScale:       noiseScale,
 				NoiseModel:       noiseModel,
@@ -101,6 +117,18 @@ configurable noise, runs every solver, and produces a comparison table.`,
 			}
 
 			fmt.Print(bench.FormatResults(allResults))
+
+			if memProfile != "" {
+				f, err := os.Create(memProfile)
+				if err != nil {
+					return fmt.Errorf("create memory profile: %w", err)
+				}
+				defer f.Close()
+				runtime.GC()
+				if err := pprof.WriteHeapProfile(f); err != nil {
+					return fmt.Errorf("write memory profile: %w", err)
+				}
+			}
 			return nil
 		},
 	}
@@ -112,6 +140,8 @@ configurable noise, runs every solver, and produces a comparison table.`,
 	cmd.Flags().Float64Var(&congestionFactor, "congestion-factor", 5.0, "Congestion delay multiplier")
 	cmd.Flags().Int64Var(&seed, "seed", 42, "Random seed")
 	cmd.Flags().BoolVar(&synthetic, "synthetic", false, "Use synthetic topologies (Barabasi-Albert, Waxman) instead of GraphML files")
+	cmd.Flags().StringVar(&cpuProfile, "cpuprofile", "", "Write CPU profile to file")
+	cmd.Flags().StringVar(&memProfile, "memprofile", "", "Write memory profile to file")
 
 	return cmd
 }
