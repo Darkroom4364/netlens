@@ -26,7 +26,9 @@ func TestAddNoise_Lognormal(t *testing.T) {
 
 func TestAddNoise_Gaussian(t *testing.T) {
 	rng := rand.New(rand.NewSource(42))
-	got := addNoise(10.0, 0.1, "gaussian", rng)
+	// Use tiny base + large scale so unconstrained noise would go negative;
+	// clipping must prevent that.
+	got := addNoise(0.001, 100.0, "gaussian", rng)
 	if got < 0 {
 		t.Errorf("gaussian noise with clipping should be >= 0, got %f", got)
 	}

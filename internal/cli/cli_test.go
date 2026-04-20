@@ -411,6 +411,7 @@ func TestCLI_ScanTableFormat(t *testing.T) {
 }
 
 func TestCLI_GetSolverAllValid(t *testing.T) {
+	// Mirrors the switch in getSolver. Also verify unknown name is rejected.
 	names := []string{"tsvd", "tikhonov", "nnls", "admm", "irl1", "vardi", "tomogravity", "laplacian"}
 	for _, name := range names {
 		t.Run(name, func(t *testing.T) {
@@ -423,6 +424,12 @@ func TestCLI_GetSolverAllValid(t *testing.T) {
 			}
 		})
 	}
+	t.Run("unknown", func(t *testing.T) {
+		_, err := getSolver("bogus")
+		if err == nil {
+			t.Fatal("expected error for unknown solver name")
+		}
+	})
 }
 
 func TestCLI_GetSolverEmpty(t *testing.T) {
